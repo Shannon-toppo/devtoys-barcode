@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <Version>0.1.0-preview.1</Version>
     <PackageId>Shannon.DevToys.Barcode</PackageId>
-    <Title>Shannon.DevToys.Barcode</Title>
+    <Title>Barcode Encoder / Decoder</Title>
     <Description>Read and generate barcodes (EAN-13, UPC-A, Code 128, Code 39, ITF, Codabar, Data Matrix, PDF417, Aztec...) in DevToys.</Description>
     <Authors>Shannon-toppo</Authors>
     <Copyright>Copyright (c) 2026 Shannon-toppo</Copyright>

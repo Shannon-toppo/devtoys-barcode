@@ -46,7 +46,7 @@ Requires DevToys 2.0. The package was developed against DevToys 2.0.9 on macOS. 
 1. Download the `.nupkg` file of the package from [NuGet](https://www.nuget.org/packages/Shannon.DevToys.Barcode) or from the [releases page](https://github.com/Shannon-toppo/devtoys-barcode/releases).
 2. In DevToys, open Manage extensions, choose Install, select the `.nupkg` file, and restart DevToys.
 
-This route follows the DevToys documentation for installing extensions. It has not yet been verified for this package.
+The extension then appears in the list as "Barcode Encoder / Decoder". This route was verified with DevToys 2.0.9 on macOS.
 
 ## Usage
 

@@ -46,7 +46,7 @@ Shannon.DevToys.Barcodeは、DevToys 2.0に「バーコードエンコーダー 
 1. パッケージの`.nupkg`ファイルを[NuGet](https://www.nuget.org/packages/Shannon.DevToys.Barcode)または[リリースページ](https://github.com/Shannon-toppo/devtoys-barcode/releases)からダウンロードします。
 2. DevToysで拡張機能の管理（Manage extensions）を開き、インストール（Install）を選んで`.nupkg`ファイルを指定し、DevToysを再起動します。
 
-この手順はDevToysのドキュメントに従っていますが、このパッケージではまだ検証していません。
+インストール後、拡張機能の一覧には「Barcode Encoder / Decoder」と表示されます。この手順はmacOSのDevToys 2.0.9で確認しています。
 
 ## 使い方
 
