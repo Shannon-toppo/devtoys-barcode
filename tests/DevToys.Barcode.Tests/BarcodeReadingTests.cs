@@ -418,4 +418,45 @@ public class BarcodeReadingTests
         Assert.Equal((expected.Width, expected.Height), (actual.Width, actual.Height));
         Assert.Equal(expected.Matrix, actual.Matrix);
     }
+
+    [Theory]
+    [InlineData(22f)]
+    [InlineData(-45f)]
+    [InlineData(67f)]
+    public void TiltedPicture_IsTurnedAsImageSharpTurnsIt(float degrees)
+    {
+        // The "tilted" attempts turn the picture with a rotation of their own (ImageSharp's is slow): same size and
+        // placement, and the same pixels give or take one level, transparent pixels included.
+        var random = new Random(3);
+        using Image<Rgba32> image = TestImages.WithBorder(TestImages.Generate(BarcodeFormat.CODE_128, "Tilted"), 10);
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y += 3)
+            {
+                foreach (ref Rgba32 pixel in accessor.GetRowSpan(y))
+                {
+                    pixel.A = (byte)random.Next(256);
+                }
+            }
+        });
+
+        using Image<Rgba32> expected = image.Clone(context => context.Rotate(degrees, KnownResamplers.Triangle).BackgroundColor(Color.White));
+        using Image<Rgba32> actual = BarcodeImageRotator.RotateOnWhite(image, degrees, maxDegreeOfParallelism: 2);
+
+        Assert.Equal(expected.Size, actual.Size);
+        int differing = 0;
+        for (int y = 0; y < expected.Height; y++)
+        {
+            for (int x = 0; x < expected.Width; x++)
+            {
+                Rgba32 e = expected[x, y];
+                Rgba32 a = actual[x, y];
+                int difference = new[] { Math.Abs(e.R - a.R), Math.Abs(e.G - a.G), Math.Abs(e.B - a.B), Math.Abs(e.A - a.A) }.Max();
+                Assert.True(difference <= 1, $"({x}, {y}): {e} and {a}");
+                differing += difference;
+            }
+        }
+
+        Assert.True(differing < expected.Width * expected.Height / 1000, $"{differing} pixels differ");
+    }
 }

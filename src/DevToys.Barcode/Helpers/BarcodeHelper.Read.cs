@@ -554,7 +554,7 @@ internal static partial class BarcodeHelper
     private static Image<Rgba32> Rotate(Image<Rgba32> image, double angle)
         => angle == 90
             ? image.Clone(context => context.Rotate(RotateMode.Rotate90))
-            : image.Clone(context => context.Rotate((float)angle, KnownResamplers.Triangle).BackgroundColor(Color.White));
+            : BarcodeImageRotator.RotateOnWhite(image, (float)angle, MaxDegreeOfParallelism);
 
     /// <summary>
     /// Gives the rectangle of the original picture (<paramref name="originalWidth"/> x <paramref name="originalHeight"/>)
