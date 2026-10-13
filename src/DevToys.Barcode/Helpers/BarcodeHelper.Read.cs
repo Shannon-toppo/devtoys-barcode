@@ -619,7 +619,7 @@ internal static partial class BarcodeHelper
 
         cancellationToken.ThrowIfCancellationRequested();
         LuminanceSource luminance = view.Luminance;
-        foreach (Result result in Timed($"  zxing {family} {luminance.Width}x{luminance.Height}", () => Decode(luminance, formats, pass.RelaxItfLengths, tryInverted: family != Families.OneDimensional)))
+        foreach (Result result in Timed($"  zxing {family} {luminance.Width}x{luminance.Height}", () => Decode(luminance, formats, pass.RelaxItfLengths, cancellationToken, tryInverted: family != Families.OneDimensional)))
         {
             if (string.IsNullOrEmpty(result.Text))
             {
@@ -636,17 +636,15 @@ internal static partial class BarcodeHelper
         return results;
     }
 
-    private static Result[] Decode(LuminanceSource luminance, BarcodeFormat[] formats, bool relaxItfLengths, bool tryInverted = false)
+    private static Result[] Decode(LuminanceSource luminance, BarcodeFormat[] formats, bool relaxItfLengths, CancellationToken cancellationToken, bool tryInverted = false)
     {
-        var barcodeReader = new BarcodeReaderGeneric
+        // Only Data Matrix, Aztec, QR and PDF417 do something of "try inverted", and it makes 1D decoding twice as slow.
+        var barcodeReader = new BarcodeReaderGeneric(new CancellableReader(tryInverted, cancellationToken), null, null)
         {
             AutoRotate = false,
             Options =
             {
                 TryHarder = true,
-
-                // Only Data Matrix, Aztec, QR and PDF417 do something of this, and it makes 1D decoding twice as slow.
-                TryInverted = tryInverted,
                 PossibleFormats = formats
             }
         };
@@ -672,6 +670,35 @@ internal static partial class BarcodeHelper
             // Expanded decoder throws on noise, for instance). Nothing could be read.
             return [];
         }
+    }
+
+    /// <summary>
+    /// ZXing's reader, made to stop when the reading is cancelled. A call to ZXing cannot be interrupted, and its multiple
+    /// barcode reader decodes many parts of the picture one after the other (around every symbol it finds, up to dozens
+    /// of times), which takes long on a big picture: the token is checked before each of them. The inverted picture is
+    /// tried here too, as a separate attempt, the way ZXing tries it when given the "also inverted" hint.
+    /// </summary>
+    private sealed class CancellableReader(bool alsoInverted, CancellationToken cancellationToken) : Reader
+    {
+        private readonly MultiFormatReader reader = new();
+
+        public Result? decode(BinaryBitmap image) => decode(image, null);
+
+        public Result? decode(BinaryBitmap image, IDictionary<DecodeHintType, object>? hints)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Result? result = reader.decode(image, hints);
+            if (result is null && alsoInverted)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                image.BlackMatrix.flip();
+                result = reader.decode(image, hints);
+            }
+
+            return result;
+        }
+
+        public void reset() => reader.reset();
     }
 
     /// <summary>
@@ -712,7 +739,7 @@ internal static partial class BarcodeHelper
         {
             cancellationToken.ThrowIfCancellationRequested();
             using Image<Rgba32> enlarged = crop.Clone(context => context.Resize((int)(area.Width * factor), (int)(area.Height * factor)));
-            if (Decode(new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(enlarged), [result.Format], relaxItfLengths).Any(r => r.BarcodeFormat == result.Format && r.Text == result.Text))
+            if (Decode(new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(enlarged), [result.Format], relaxItfLengths, cancellationToken).Any(r => r.BarcodeFormat == result.Format && r.Text == result.Text))
             {
                 return true;
             }
