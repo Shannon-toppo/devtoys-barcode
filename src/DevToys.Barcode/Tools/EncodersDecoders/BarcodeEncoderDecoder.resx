@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessibleName" xml:space="preserve">
+    <value>Barcode Encoder and Decoder tool</value>
+  </data>
+  <data name="BadCheckDigitMessage" xml:space="preserve">
+    <value>The last digit is not the correct check digit. Remove it to have it calculated automatically, or correct it.</value>
+  </data>
+  <data name="CancelReading" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ConfigurationTitle" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Read or generate barcodes (EAN-13, UPC-A, Code 128, Code 39, ITF, Codabar, Data Matrix, PDF417, Aztec...) from a text or an image. Can be exported as SVG.</value>
+  </data>
+  <data name="EncodedValueDescription" xml:space="preserve">
+    <value>A check digit was added. The barcode contains: {0}</value>
+  </data>
+  <data name="EncodedValueTitle" xml:space="preserve">
+    <value>Encoded value</value>
+  </data>
+  <data name="EncoderRejectedMessage" xml:space="preserve">
+    <value>{0} could not encode this text. Details: {1}</value>
+  </data>
+  <data name="FormatDescription" xml:space="preserve">
+    <value>Select the type of barcode to generate</value>
+  </data>
+  <data name="FormatTitle" xml:space="preserve">
+    <value>Barcode type</value>
+  </data>
+  <data name="GenerationFailedTitle" xml:space="preserve">
+    <value>Cannot generate this barcode</value>
+  </data>
+  <data name="ImageNotReadableDescription" xml:space="preserve">
+    <value>This file could not be read as an image.</value>
+  </data>
+  <data name="ImageNotReadableTitle" xml:space="preserve">
+    <value>Cannot read the file</value>
+  </data>
+  <data name="ImageWithBarcode" xml:space="preserve">
+    <value>Barcode</value>
+  </data>
+  <data name="InputText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="InvalidCharactersMessage" xml:space="preserve">
+    <value>{0} cannot encode some of the characters in this text.</value>
+  </data>
+  <data name="LongDisplayTitle" xml:space="preserve">
+    <value>Barcode Encoder / Decoder</value>
+  </data>
+  <data name="NoBarcodeFound" xml:space="preserve">
+    <value>No barcode found in this image</value>
+  </data>
+  <data name="NoBarcodeFoundDescription" xml:space="preserve">
+    <value>Try a sharper or larger image, or restrict the picture to the barcode.</value>
+  </data>
+  <data name="ReadingBarcodes" xml:space="preserve">
+    <value>Reading...</value>
+  </data>
+  <data name="ResultsFormatColumn" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="ResultsTextColumn" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="ResultsTitle" xml:space="preserve">
+    <value>Detected barcodes</value>
+  </data>
+  <data name="RuleAztec" xml:space="preserve">
+    <value>Aztec can encode any text, up to a limited size.</value>
+  </data>
+  <data name="RuleCode128" xml:space="preserve">
+    <value>Code 128 encodes ASCII characters (letters without accents, digits and common symbols).</value>
+  </data>
+  <data name="RuleCode39" xml:space="preserve">
+    <value>Code 39 encodes ASCII characters, up to 80 of them. The * character is reserved.</value>
+  </data>
+  <data name="RuleCode93" xml:space="preserve">
+    <value>Code 93 encodes ASCII characters, up to 80 of them.</value>
+  </data>
+  <data name="RuleCodabar" xml:space="preserve">
+    <value>Codabar encodes digits and the symbols - $ : / . +, optionally between a start and a stop character taken from A, B, C, D.</value>
+  </data>
+  <data name="RuleDataMatrix" xml:space="preserve">
+    <value>Data Matrix can encode any text, up to a limited size.</value>
+  </data>
+  <data name="RuleEan13" xml:space="preserve">
+    <value>EAN-13 needs 12 digits (the check digit is added) or 13 digits (the last one is the check digit).</value>
+  </data>
+  <data name="RuleEan8" xml:space="preserve">
+    <value>EAN-8 needs 7 digits (the check digit is added) or 8 digits (the last one is the check digit).</value>
+  </data>
+  <data name="RuleItf" xml:space="preserve">
+    <value>ITF needs an even number of digits, up to 80.</value>
+  </data>
+  <data name="RulePdf417" xml:space="preserve">
+    <value>PDF417 can encode any text, up to a limited size.</value>
+  </data>
+  <data name="RuleUpcA" xml:space="preserve">
+    <value>UPC-A needs 11 digits (the check digit is added) or 12 digits (the last one is the check digit).</value>
+  </data>
+  <data name="RuleUpcE" xml:space="preserve">
+    <value>UPC-E needs 7 digits (number system 0 or 1, then 6 digits; the check digit is added) or 8 digits (the last one is the check digit).</value>
+  </data>
+  <data name="SearchKeywords" xml:space="preserve">
+    <value>Barcode EAN UPC Code128 Code39 ITF Codabar DataMatrix PDF417 Aztec</value>
+  </data>
+  <data name="ShortDisplayTitle" xml:space="preserve">
+    <value>Barcode</value>
+  </data>
+  <data name="TooLongMessage" xml:space="preserve">
+    <value>This text is too long for {0}.</value>
+  </data>
+  <data name="WrongLengthMessage" xml:space="preserve">
+    <value>The length of this text is not accepted by {0}.</value>
+  </data>
+</root>

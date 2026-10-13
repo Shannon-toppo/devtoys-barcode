@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessibleName" xml:space="preserve">
+    <value>バーコードのエンコーダーおよびデコーダー</value>
+  </data>
+  <data name="BadCheckDigitMessage" xml:space="preserve">
+    <value>末尾の数字は正しいチェックディジットではありません。削除するとチェックディジットを自動で計算します。正しい数字に修正することもできます。</value>
+  </data>
+  <data name="CancelReading" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="ConfigurationTitle" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>テキストまたは画像から、バーコードを生成または読み取ります（EAN-13、UPC-A、Code 128、Code 39、ITF、Codabar、Data Matrix、PDF417、Aztecなど）。SVG形式で書き出せます。</value>
+  </data>
+  <data name="EncodedValueDescription" xml:space="preserve">
+    <value>チェックディジットを追加しました。バーコードに含まれる値は{0}です。</value>
+  </data>
+  <data name="EncodedValueTitle" xml:space="preserve">
+    <value>エンコード後の値</value>
+  </data>
+  <data name="EncoderRejectedMessage" xml:space="preserve">
+    <value>{0}ではこのテキストをエンコードできませんでした。詳細：{1}</value>
+  </data>
+  <data name="FormatDescription" xml:space="preserve">
+    <value>生成するバーコードの種類を選択します</value>
+  </data>
+  <data name="FormatTitle" xml:space="preserve">
+    <value>バーコードの種類</value>
+  </data>
+  <data name="GenerationFailedTitle" xml:space="preserve">
+    <value>このバーコードを生成できません</value>
+  </data>
+  <data name="ImageNotReadableDescription" xml:space="preserve">
+    <value>このファイルは画像として読み込めませんでした。</value>
+  </data>
+  <data name="ImageNotReadableTitle" xml:space="preserve">
+    <value>ファイルを読み込めません</value>
+  </data>
+  <data name="ImageWithBarcode" xml:space="preserve">
+    <value>バーコード</value>
+  </data>
+  <data name="InputText" xml:space="preserve">
+    <value>テキスト</value>
+  </data>
+  <data name="InvalidCharactersMessage" xml:space="preserve">
+    <value>{0}では、このテキストに含まれる一部の文字をエンコードできません。</value>
+  </data>
+  <data name="LongDisplayTitle" xml:space="preserve">
+    <value>バーコードエンコーダー / デコーダー</value>
+  </data>
+  <data name="NoBarcodeFound" xml:space="preserve">
+    <value>この画像にバーコードが見つかりません</value>
+  </data>
+  <data name="NoBarcodeFoundDescription" xml:space="preserve">
+    <value>より鮮明で大きい画像を試すか、バーコードの部分だけを切り抜いてみてください。</value>
+  </data>
+  <data name="ReadingBarcodes" xml:space="preserve">
+    <value>読み取り中…</value>
+  </data>
+  <data name="ResultsFormatColumn" xml:space="preserve">
+    <value>種類</value>
+  </data>
+  <data name="ResultsTextColumn" xml:space="preserve">
+    <value>テキスト</value>
+  </data>
+  <data name="ResultsTitle" xml:space="preserve">
+    <value>検出されたバーコード</value>
+  </data>
+  <data name="RuleAztec" xml:space="preserve">
+    <value>Aztecは任意のテキストをエンコードできますが、サイズには上限があります。</value>
+  </data>
+  <data name="RuleCode128" xml:space="preserve">
+    <value>Code 128はASCII文字（アクセントのない英字、数字、一般的な記号）をエンコードできます。</value>
+  </data>
+  <data name="RuleCode39" xml:space="preserve">
+    <value>Code 39はASCII文字を80文字までエンコードできます。「*」は予約されているため使えません。</value>
+  </data>
+  <data name="RuleCode93" xml:space="preserve">
+    <value>Code 93はASCII文字を80文字までエンコードできます。</value>
+  </data>
+  <data name="RuleCodabar" xml:space="preserve">
+    <value>Codabarは数字と記号（- $ : / . +）をエンコードできます。A、B、C、Dから選んだ開始文字と終了文字で囲むこともできます。</value>
+  </data>
+  <data name="RuleDataMatrix" xml:space="preserve">
+    <value>Data Matrixは任意のテキストをエンコードできますが、サイズには上限があります。</value>
+  </data>
+  <data name="RuleEan13" xml:space="preserve">
+    <value>EAN-13には、12桁の数字（チェックディジットを追加）または13桁の数字（末尾がチェックディジット）が必要です。</value>
+  </data>
+  <data name="RuleEan8" xml:space="preserve">
+    <value>EAN-8には、7桁の数字（チェックディジットを追加）または8桁の数字（末尾がチェックディジット）が必要です。</value>
+  </data>
+  <data name="RuleItf" xml:space="preserve">
+    <value>ITFには偶数桁の数字が必要で、80桁までです。</value>
+  </data>
+  <data name="RulePdf417" xml:space="preserve">
+    <value>PDF417は任意のテキストをエンコードできますが、サイズには上限があります。</value>
+  </data>
+  <data name="RuleUpcA" xml:space="preserve">
+    <value>UPC-Aには、11桁の数字（チェックディジットを追加）または12桁の数字（末尾がチェックディジット）が必要です。</value>
+  </data>
+  <data name="RuleUpcE" xml:space="preserve">
+    <value>UPC-Eには、ナンバーシステム（0または1）と6桁の数字の計7桁（チェックディジットを追加）、または8桁の数字（末尾がチェックディジット）が必要です。</value>
+  </data>
+  <data name="SearchKeywords" xml:space="preserve">
+    <value>Barcode EAN UPC Code128 Code39 ITF Codabar DataMatrix PDF417 Aztec バーコード 読み取り 生成 スキャン JAN</value>
+  </data>
+  <data name="ShortDisplayTitle" xml:space="preserve">
+    <value>バーコード</value>
+  </data>
+  <data name="TooLongMessage" xml:space="preserve">
+    <value>このテキストは{0}の上限を超えています。</value>
+  </data>
+  <data name="WrongLengthMessage" xml:space="preserve">
+    <value>このテキストの長さは{0}では受け付けられません。</value>
+  </data>
+</root>

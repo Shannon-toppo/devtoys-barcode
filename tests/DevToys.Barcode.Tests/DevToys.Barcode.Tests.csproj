@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0 so the tests run on the installed runtime; the library under test targets net8.0. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The degradations and the image generators of the measurement tool are also used by the robustness tests. -->
+    <Compile Include="..\..\tools\DevToys.Barcode.Measure\Degrade.cs" Link="Measure\Degrade.cs" />
+    <Compile Include="..\..\tools\DevToys.Barcode.Measure\Symbols.cs" Link="Measure\Symbols.cs" />
+    <Compile Include="..\..\tools\DevToys.Barcode.Measure\FalsePositives.cs" Link="Measure\FalsePositives.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DevToys.Barcode\DevToys.Barcode.csproj" />
+  </ItemGroup>
+
+</Project>

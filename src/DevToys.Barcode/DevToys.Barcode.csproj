@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>DevToys.Barcode</RootNamespace>
+    <AssemblyName>Shannon.DevToys.Barcode</AssemblyName>
+
+    <!-- NuGet package -->
+    <IsPackable>true</IsPackable>
+    <Version>0.1.0-preview.1</Version>
+    <PackageId>Shannon.DevToys.Barcode</PackageId>
+    <Title>Shannon.DevToys.Barcode</Title>
+    <Description>Read and generate barcodes (EAN-13, UPC-A, Code 128, Code 39, ITF, Codabar, Data Matrix, PDF417, Aztec...) in DevToys.</Description>
+    <Authors>Shannon-toppo</Authors>
+    <Copyright>Copyright (c) 2026 Shannon-toppo</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Shannon-toppo/devtoys-barcode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Shannon-toppo/devtoys-barcode</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>devtoys-app</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Documentation shipped at the root of the package. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Compile against the same DevToys.Api (and therefore the same SixLabors.ImageSharp 3.1.12) as the host. -->
+    <PackageReference Include="DevToys.Api" Version="2.0.10-preview" />
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
+    <PackageReference Include="ZXing.Net.Bindings.ImageSharp.V3" Version="0.16.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DevToys.Barcode.Tests" />
+    <InternalsVisibleTo Include="DevToys.Barcode.Measure" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="DevToys.Api" />
+    <Using Include="System.ComponentModel.Composition" />
+    <Using Include="DevToys.Api.GUI" Static="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Tools\EncodersDecoders\BarcodeEncoderDecoder.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>BarcodeEncoderDecoder.resx</DependentUpon>
+    </Compile>
+    <EmbeddedResource Update="Tools\EncodersDecoders\BarcodeEncoderDecoder.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Tools\EncodersDecoders\BarcodeEncoderDecoder.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- This makes sure to include platform-specific binaries into the NuGet package, if any-->
+    <None Include="runtimes\**" Pack="true" PackagePath="\lib\net8.0\runtimes\">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- DevToys extensions must ship their build output (our dll + non-host dependencies) under lib/net8.0. -->
+  <Target Name="IncludeAllFilesInTargetDir" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <!-- The SDK already packs the main dll, the runtimeconfig and the satellite resource assemblies (ja-JP, ...) under lib/net8.0; exclude them to avoid NU5118. -->
+      <None Include="$(OutputPath)\**" Exclude="$(OutputPath)\$(AssemblyName).dll;$(OutputPath)\$(AssemblyName).runtimeconfig.json;$(OutputPath)\**\$(AssemblyName).resources.dll">
+        <Pack>true</Pack>
+        <PackagePath>lib\net8.0</PackagePath>
+      </None>
+    </ItemGroup>
+  </Target>
+
+</Project>
