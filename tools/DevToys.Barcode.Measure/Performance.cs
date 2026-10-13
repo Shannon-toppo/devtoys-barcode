@@ -76,6 +76,7 @@ internal static class Performance
     {
         string imagesDirectory = args.Length > 0 ? args[0] : "test-images";
         int runs = args.Length > 1 ? int.Parse(args[1]) : 10;
+        string? only = args.Length > 2 ? args[2] : null;
 
         var cases = new List<(string Name, Func<Image<Rgba32>> Make)>();
         foreach (SymbolSpec symbol in Symbols.All)
@@ -97,6 +98,10 @@ internal static class Performance
         cases.Add(("Code 128, contrast 0.15 (enhanced attempts)", () => { using Image<Rgba32> s = Symbols.Render(Symbols.All[0]); return Degrade.Apply("lowcontrast", 0.15, s, 1); }));
         cases.Add(("800x600 photo-like, no barcode (every attempt)", () => FalsePositives.PhotoLike(800, 600, 1)));
         cases.Add(("800x600 text-like, no barcode (every attempt)", () => FalsePositives.TextLike(800, 600, 1)));
+        if (only is not null)
+        {
+            cases.RemoveAll(c => !c.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
+        }
 
         using (var warm = new Image<Rgba32>(300, 200, Color.White))
         {
