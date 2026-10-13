@@ -489,10 +489,8 @@ public sealed class BarcodeEncoderDecoderGuiToolTests : IDisposable
         PickFile(SavePng(CreateNoise(2500, 2500)));
         Task reading = _tool.WorkTask!;
 
-        for (int i = 0; i < 40 && !progress.IsVisible; i++)
-        {
-            await Task.Delay(50);
-        }
+        // Wait for the progress task itself and not for a fixed time: on a loaded machine its timer can fire late.
+        await _tool.ProgressTask!;
 
         Assert.True(progress.IsVisible, "the progress is shown when reading takes more than a moment");
 
