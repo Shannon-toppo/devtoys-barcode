@@ -2,6 +2,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using ZXing;
+using ZXing.Common;
 
 namespace DevToys.Barcode.Helpers;
 
@@ -13,6 +14,8 @@ internal static partial class BarcodeHelper
     // Upscaling is only worth it, and affordable, on small pictures.
     private const int MaxUpscaledSize = 1000;
     private const int MaxRegions = 12;
+
+    private static int MaxDegreeOfParallelism => Math.Max(1, Math.Min(4, Environment.ProcessorCount));
 
     // A bar that is only a few pixels high is a scan line through noise, not a barcode. (Kept low: the height of the
     // bars of a tilted symbol is hard to measure.)
@@ -432,7 +435,7 @@ internal static partial class BarcodeHelper
             Parallel.For(
                 0,
                 items.Count,
-                new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Math.Max(1, Math.Min(4, Environment.ProcessorCount)) },
+                new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = MaxDegreeOfParallelism },
                 i =>
                 {
                     (double angle, Families family) = items[i];
@@ -638,31 +641,23 @@ internal static partial class BarcodeHelper
 
     private static Result[] Decode(LuminanceSource luminance, BarcodeFormat[] formats, bool relaxItfLengths, CancellationToken cancellationToken, bool tryInverted = false)
     {
-        // Only Data Matrix, Aztec, QR and PDF417 do something of "try inverted", and it makes 1D decoding twice as slow.
-        var barcodeReader = new BarcodeReaderGeneric(new CancellableReader(tryInverted, cancellationToken), null, null)
-        {
-            AutoRotate = false,
-            Options =
-            {
-                TryHarder = true,
-                PossibleFormats = formats
-            }
-        };
+        var options = new DecodingOptions { TryHarder = true, PossibleFormats = formats };
 
         // With "try harder", ZXing's 1D readers also decode the picture turned by 90 degrees whenever they find nothing on
         // it. Every pass decodes its pictures at right angle pairs itself (0 and 90, and each tilted angle has one about
         // 90 degrees away), and a result is confirmed in the orientation it was read in, so that would only decode every
         // orientation twice. (Only the 1D readers know of this hint.)
-        barcodeReader.Options.Hints[DecodeHintType.TRY_HARDER_WITHOUT_ROTATION] = true;
+        options.Hints[DecodeHintType.TRY_HARDER_WITHOUT_ROTATION] = true;
 
         if (relaxItfLengths)
         {
-            barcodeReader.Options.Hints[DecodeHintType.ALLOWED_LENGTHS] = RelaxedItfLengths;
+            options.Hints[DecodeHintType.ALLOWED_LENGTHS] = RelaxedItfLengths;
         }
 
         try
         {
-            return barcodeReader.DecodeMultiple(luminance) ?? [];
+            // Only Data Matrix, Aztec, QR and PDF417 do something of "try inverted", and it makes 1D decoding twice as slow.
+            return MultipleBarcodeDecoder.Decode(luminance, options.Hints, alsoInverted: tryInverted, MaxDegreeOfParallelism, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not OutOfMemoryException)
         {
@@ -670,35 +665,6 @@ internal static partial class BarcodeHelper
             // Expanded decoder throws on noise, for instance). Nothing could be read.
             return [];
         }
-    }
-
-    /// <summary>
-    /// ZXing's reader, made to stop when the reading is cancelled. A call to ZXing cannot be interrupted, and its multiple
-    /// barcode reader decodes many parts of the picture one after the other (around every symbol it finds, up to dozens
-    /// of times), which takes long on a big picture: the token is checked before each of them. The inverted picture is
-    /// tried here too, as a separate attempt, the way ZXing tries it when given the "also inverted" hint.
-    /// </summary>
-    private sealed class CancellableReader(bool alsoInverted, CancellationToken cancellationToken) : Reader
-    {
-        private readonly MultiFormatReader reader = new();
-
-        public Result? decode(BinaryBitmap image) => decode(image, null);
-
-        public Result? decode(BinaryBitmap image, IDictionary<DecodeHintType, object>? hints)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Result? result = reader.decode(image, hints);
-            if (result is null && alsoInverted)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                image.BlackMatrix.flip();
-                result = reader.decode(image, hints);
-            }
-
-            return result;
-        }
-
-        public void reset() => reader.reset();
     }
 
     /// <summary>
