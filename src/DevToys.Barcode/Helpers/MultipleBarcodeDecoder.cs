@@ -20,7 +20,7 @@ namespace DevToys.Barcode.Helpers;
 /// whether a result is kept: one with the text of an earlier one is not). So here the parts around a symbol are decoded
 /// in parallel, and the results are put together in the order ZXing would have found them: the results are the same.
 /// The cancellation token is checked before each decoding, and the inverted picture is tried as a separate decoding,
-/// as ZXing tries it when given the "also inverted" hint.
+/// as ZXing tries it when given the "also inverted" hint (for the whole picture, at the same time as the picture).
 /// </para>
 /// </remarks>
 internal static class MultipleBarcodeDecoder
@@ -53,7 +53,7 @@ internal static class MultipleBarcodeDecoder
             return new QRCodeMultiReader().decodeMultiple(image, hints) ?? [];
         }
 
-        var context = new Context(hints, alsoInverted, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = maxDegreeOfParallelism });
+        var context = new Context(luminance, hints, alsoInverted, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = maxDegreeOfParallelism });
         Found? root = Find(context, image, 0, 0, 0);
 
         var results = new List<Result>();
@@ -62,7 +62,7 @@ internal static class MultipleBarcodeDecoder
         return [.. results];
     }
 
-    private sealed record Context(IDictionary<DecodeHintType, object> Hints, bool AlsoInverted, ParallelOptions Options);
+    private sealed record Context(LuminanceSource Luminance, IDictionary<DecodeHintType, object> Hints, bool AlsoInverted, ParallelOptions Options);
 
     /// <summary>ZXing's results in the order its reader adds them: a symbol, then what is around it, left, above, right and below.</summary>
     private static void Collect(Found? found, List<Result> results, HashSet<string> texts)
@@ -90,7 +90,9 @@ internal static class MultipleBarcodeDecoder
             return null;
         }
 
-        Result? result = DecodeOne(context, image);
+        Result? result = depth == 0 && context.AlsoInverted && context.Options.MaxDegreeOfParallelism > 1
+            ? DecodeOneWithInvertedInParallel(context, image)
+            : DecodeOne(context, image);
         if (result is null)
         {
             return null;
@@ -170,6 +172,68 @@ internal static class MultipleBarcodeDecoder
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Like <see cref="DecodeOne"/>, with the inverted picture decoded at the same time as the picture rather than after
+    /// it: on a big picture each is long. Its result is only used when the picture gives none, as in ZXing.
+    /// </summary>
+    private static Result? DecodeOneWithInvertedInParallel(Context context, BinaryBitmap image)
+    {
+        context.Options.CancellationToken.ThrowIfCancellationRequested();
+        var flipped = (BitMatrix)image.BlackMatrix.Clone();
+        flipped.flip();
+        var inverted = new BinaryBitmap(new FixedBinarizer(context.Luminance, image, flipped));
+
+        (Result? Result, Exception? Error) normal = default;
+        (Result? Result, Exception? Error) other = default;
+        Parallel.Invoke(
+            context.Options,
+            () => normal = Attempt(() => new MultiFormatReader().decode(image, context.Hints)),
+            () => other = Attempt(() => new MultiFormatReader().decode(inverted, context.Hints)));
+
+        // What ZXing would have done: the inverted picture is only decoded (and its exceptions only matter) when the picture gives nothing.
+        if (normal.Error is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(normal.Error);
+        }
+
+        if (normal.Result is not null)
+        {
+            return normal.Result;
+        }
+
+        if (other.Error is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(other.Error);
+        }
+
+        return other.Result;
+
+        static (Result?, Exception?) Attempt(Func<Result?> decode)
+        {
+            try
+            {
+                return (decode(), null);
+            }
+            catch (Exception ex)
+            {
+                return (null, ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gives a black and white picture made already: the picture of the whole luminance, inverted, as ZXing's "also
+    /// inverted" inverts it (in place, which cannot be done while the picture is decoded).
+    /// </summary>
+    private sealed class FixedBinarizer(LuminanceSource luminance, BinaryBitmap image, BitMatrix matrix) : Binarizer(luminance)
+    {
+        public override BitMatrix BlackMatrix => matrix;
+
+        public override BitArray getBlackRow(int y, BitArray row) => image.getBlackRow(y, row);
+
+        public override Binarizer createBinarizer(LuminanceSource source) => new HybridBinarizer(source);
     }
 
     private static Result Translate(Result result, int xOffset, int yOffset)
