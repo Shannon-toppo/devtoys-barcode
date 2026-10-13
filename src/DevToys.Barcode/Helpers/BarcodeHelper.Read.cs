@@ -396,11 +396,13 @@ internal static partial class BarcodeHelper
         using Prepared prepared = pass.Prepare is null ? new Prepared(frame, 1, owned: false) : pass.Prepare(frame);
         Image<Rgba32> image = prepared.Image;
 
-        // One work item per angle and per family. The rotated picture of an angle is made once, by the first item that needs it.
-        var rotations = new Dictionary<double, Lazy<Image<Rgba32>>>();
+        // One work item per angle and per family. The view of an angle is shared by its items.
+        var views = new Dictionary<double, View>();
         var items = new List<(double Angle, Families Family)>();
         foreach (double angle in pass.Angles)
         {
+            views[angle] = new View(image, angle, views.TryGetValue(0, out View? upright) ? upright : null);
+
             // Every family is tried at every angle: matrix symbols are rotation invariant in theory, but ZXing's Aztec and
             // Data Matrix detectors read some small ones only when the picture is turned.
             Families families = pass.Families;
@@ -422,11 +424,6 @@ internal static partial class BarcodeHelper
                     items.Add((angle, family));
                 }
             }
-
-            if (angle != 0)
-            {
-                rotations[angle] = new Lazy<Image<Rgba32>>(() => Timed($"  rotate {angle}", () => Rotate(image, angle)), LazyThreadSafetyMode.ExecutionAndPublication);
-            }
         }
 
         var perItem = new List<BarcodeReadResult>[items.Count];
@@ -439,11 +436,11 @@ internal static partial class BarcodeHelper
                 i =>
                 {
                     (double angle, Families family) = items[i];
-                    Image<Rgba32> decoded = angle == 0 ? image : rotations[angle].Value;
+                    View view = views[angle];
                     var list = new List<BarcodeReadResult>();
-                    foreach (BarcodeReadResult result in DecodeFamilies(decoded, family, pass, filter, prepared.Scale, cancellationToken))
+                    foreach (BarcodeReadResult result in DecodeFamilies(view, family, pass, filter, prepared.Scale, cancellationToken))
                     {
-                        Rectangle bounds = angle == 0 ? result.Bounds : MapToUnrotated(result.Bounds, angle, decoded, image);
+                        Rectangle bounds = angle == 0 ? result.Bounds : MapToUnrotated(result.Bounds, angle, view.Luminance.Width, view.Luminance.Height, image.Width, image.Height);
                         list.Add(result with { Bounds = prepared.Scale == 1 ? bounds : Scale(bounds, 1 / prepared.Scale, frame.Width, frame.Height) });
                     }
 
@@ -456,16 +453,99 @@ internal static partial class BarcodeHelper
         }
         finally
         {
-            foreach (Lazy<Image<Rgba32>> rotation in rotations.Values)
+            foreach (View view in views.Values)
             {
-                if (rotation.IsValueCreated)
-                {
-                    rotation.Value.Dispose();
-                }
+                view.Dispose();
             }
         }
 
         return [.. perItem.Where(list => list is not null).SelectMany(list => list)];
+    }
+
+    /// <summary>
+    /// The picture of a pass turned clockwise by one of its angles, and its luminance, which is what ZXing decodes. Each is
+    /// made once, by the first work item that needs it: the luminance by every item, the picture only to measure and
+    /// confirm a 1D result.
+    /// </summary>
+    private sealed class View : IDisposable
+    {
+        private readonly double angle;
+        private readonly Lazy<Image<Rgba32>> picture;
+        private readonly Lazy<LuminanceSource> luminance;
+
+        internal View(Image<Rgba32> image, double angle, View? upright)
+        {
+            this.angle = angle;
+            picture = angle == 0
+                ? new Lazy<Image<Rgba32>>(image)
+                : new Lazy<Image<Rgba32>>(() => Timed($"  rotate {angle}", () => Rotate(image, angle)), LazyThreadSafetyMode.ExecutionAndPublication);
+
+            // Turning by a right angle only moves the pixels, so the luminance of the upright picture can be turned
+            // instead of the picture: the result is the same, and is much cheaper to get.
+            luminance = new Lazy<LuminanceSource>(
+                () => angle == 90 && upright is not null
+                    ? Timed("  rotate luminance 90", () => RotateClockwise(upright.Luminance))
+                    : Timed($"  luminance {angle}", () => new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(Picture)),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+        }
+
+        internal Image<Rgba32> Picture => picture.Value;
+
+        internal LuminanceSource Luminance => luminance.Value;
+
+        public void Dispose()
+        {
+            if (angle != 0 && picture.IsValueCreated)
+            {
+                picture.Value.Dispose();
+            }
+        }
+    }
+
+    /// <summary>Luminance values computed already (ZXing's own luminance sources compute them from a picture).</summary>
+    private sealed class Luminances : BaseLuminanceSource
+    {
+        internal Luminances(int width, int height)
+            : base(width, height)
+        {
+        }
+
+        internal byte[] Values => luminances;
+
+        protected override LuminanceSource CreateLuminanceSource(byte[] newLuminances, int width, int height)
+            => new Luminances(width, height) { luminances = newLuminances };
+    }
+
+    /// <summary>The luminance of the picture turned clockwise by 90 degrees, as <see cref="RotateMode.Rotate90"/> turns it.</summary>
+    internal static LuminanceSource RotateClockwise(LuminanceSource source)
+    {
+        byte[] values = source.Matrix;
+        int width = source.Width;
+        int height = source.Height;
+        var rotated = new Luminances(height, width);
+        byte[] target = rotated.Values;
+
+        // The pixel at (x, y) goes to (height - 1 - y, x). By tiles, so that both arrays are read and written in cache-sized blocks.
+        const int Tile = 64;
+        for (int y0 = 0; y0 < height; y0 += Tile)
+        {
+            int y1 = Math.Min(height, y0 + Tile);
+            for (int x0 = 0; x0 < width; x0 += Tile)
+            {
+                int x1 = Math.Min(width, x0 + Tile);
+                for (int y = y0; y < y1; y++)
+                {
+                    int column = height - 1 - y;
+                    int row = y * width;
+                    for (int x = x0; x < x1; x++)
+                    {
+                        target[(x * height) + column] = values[row + x];
+                    }
+                }
+            }
+        }
+
+        return rotated;
     }
 
     private static Image<Rgba32> Rotate(Image<Rgba32> image, double angle)
@@ -473,16 +553,20 @@ internal static partial class BarcodeHelper
             ? image.Clone(context => context.Rotate(RotateMode.Rotate90))
             : image.Clone(context => context.Rotate((float)angle, KnownResamplers.Triangle).BackgroundColor(Color.White));
 
-    /// <summary>Gives the rectangle of the original picture that corresponds to <paramref name="bounds"/> in the picture turned clockwise by <paramref name="angle"/>.</summary>
-    private static Rectangle MapToUnrotated(Rectangle bounds, double angle, Image<Rgba32> rotated, Image<Rgba32> original)
+    /// <summary>
+    /// Gives the rectangle of the original picture (<paramref name="originalWidth"/> x <paramref name="originalHeight"/>)
+    /// that corresponds to <paramref name="bounds"/> in the picture turned clockwise by <paramref name="angle"/>
+    /// (<paramref name="rotatedWidth"/> x <paramref name="rotatedHeight"/>).
+    /// </summary>
+    private static Rectangle MapToUnrotated(Rectangle bounds, double angle, int rotatedWidth, int rotatedHeight, int originalWidth, int originalHeight)
     {
         double radians = angle * Math.PI / 180;
         double cos = Math.Cos(radians);
         double sin = Math.Sin(radians);
-        double rotatedCenterX = rotated.Width / 2.0;
-        double rotatedCenterY = rotated.Height / 2.0;
-        double originalCenterX = original.Width / 2.0;
-        double originalCenterY = original.Height / 2.0;
+        double rotatedCenterX = rotatedWidth / 2.0;
+        double rotatedCenterY = rotatedHeight / 2.0;
+        double originalCenterX = originalWidth / 2.0;
+        double originalCenterY = originalHeight / 2.0;
 
         double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
         foreach ((int px, int py) in new[] { (bounds.Left, bounds.Top), (bounds.Right, bounds.Top), (bounds.Right, bounds.Bottom), (bounds.Left, bounds.Bottom) })
@@ -497,16 +581,16 @@ internal static partial class BarcodeHelper
             maxY = Math.Max(maxY, y);
         }
 
-        int left = Math.Clamp((int)Math.Floor(minX), 0, original.Width - 1);
-        int top = Math.Clamp((int)Math.Floor(minY), 0, original.Height - 1);
-        int right = Math.Clamp((int)Math.Ceiling(maxX), left + 1, original.Width);
-        int bottom = Math.Clamp((int)Math.Ceiling(maxY), top + 1, original.Height);
+        int left = Math.Clamp((int)Math.Floor(minX), 0, originalWidth - 1);
+        int top = Math.Clamp((int)Math.Floor(minY), 0, originalHeight - 1);
+        int right = Math.Clamp((int)Math.Ceiling(maxX), left + 1, originalWidth);
+        int bottom = Math.Clamp((int)Math.Ceiling(maxY), top + 1, originalHeight);
         return new Rectangle(left, top, right - left, bottom - top);
     }
 
-    /// <summary>Runs ZXing on <paramref name="image"/> for one family. Results are checked, and have bounds in the coordinates of <paramref name="image"/>.</summary>
+    /// <summary>Runs ZXing on <paramref name="view"/> for one family. Results are checked, and have bounds in the coordinates of the view.</summary>
     private static List<BarcodeReadResult> DecodeFamilies(
-        Image<Rgba32> image,
+        View view,
         Families family,
         Pass pass,
         HashSet<BarcodeFormat>? filter,
@@ -534,15 +618,16 @@ internal static partial class BarcodeHelper
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        foreach (Result result in Timed($"  zxing {family} {image.Width}x{image.Height}", () => Decode(image, formats, pass.RelaxItfLengths, tryInverted: family != Families.OneDimensional)))
+        LuminanceSource luminance = view.Luminance;
+        foreach (Result result in Timed($"  zxing {family} {luminance.Width}x{luminance.Height}", () => Decode(luminance, formats, pass.RelaxItfLengths, tryInverted: family != Families.OneDimensional)))
         {
             if (string.IsNullOrEmpty(result.Text))
             {
                 continue;
             }
 
-            var candidate = new BarcodeReadResult(result.BarcodeFormat, result.Text, GetBounds(image, result));
-            if (family != Families.OneDimensional || IsGenuineOneDimensional(image, candidate, pass.RelaxItfLengths, scale, cancellationToken))
+            var candidate = new BarcodeReadResult(result.BarcodeFormat, result.Text, GetBounds(view, result));
+            if (family != Families.OneDimensional || IsGenuineOneDimensional(view.Picture, candidate, pass.RelaxItfLengths, scale, cancellationToken))
             {
                 results.Add(candidate);
             }
@@ -551,9 +636,9 @@ internal static partial class BarcodeHelper
         return results;
     }
 
-    private static Result[] Decode(Image<Rgba32> image, BarcodeFormat[] formats, bool relaxItfLengths, bool tryInverted = false)
+    private static Result[] Decode(LuminanceSource luminance, BarcodeFormat[] formats, bool relaxItfLengths, bool tryInverted = false)
     {
-        var barcodeReader = new ZXing.ImageSharp.BarcodeReader<Rgba32>
+        var barcodeReader = new BarcodeReaderGeneric
         {
             AutoRotate = false,
             Options =
@@ -579,7 +664,7 @@ internal static partial class BarcodeHelper
 
         try
         {
-            return barcodeReader.DecodeMultiple(image) ?? [];
+            return barcodeReader.DecodeMultiple(luminance) ?? [];
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not OutOfMemoryException)
         {
@@ -627,7 +712,7 @@ internal static partial class BarcodeHelper
         {
             cancellationToken.ThrowIfCancellationRequested();
             using Image<Rgba32> enlarged = crop.Clone(context => context.Resize((int)(area.Width * factor), (int)(area.Height * factor)));
-            if (Decode(enlarged, [result.Format], relaxItfLengths).Any(r => r.BarcodeFormat == result.Format && r.Text == result.Text))
+            if (Decode(new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(enlarged), [result.Format], relaxItfLengths).Any(r => r.BarcodeFormat == result.Format && r.Text == result.Text))
             {
                 return true;
             }
@@ -694,7 +779,7 @@ internal static partial class BarcodeHelper
         }
     }
 
-    private static Rectangle GetBounds(Image<Rgba32> image, Result result)
+    private static Rectangle GetBounds(View view, Result result)
     {
         // ZXing can leave null entries in the points of some symbols (PDF417 with unreadable rows).
         ResultPoint[]? points = result.ResultPoints?.Where(p => p is not null).ToArray();
@@ -713,6 +798,7 @@ internal static partial class BarcodeHelper
         // extent of the bars instead.
         if (points.Length == 2 && bottom - top <= 1)
         {
+            Image<Rgba32> image = view.Picture;
             (top, bottom, int module, int threshold) = MeasureBars(image, left, right, (top + bottom) / 2);
             left = ExtendHorizontally(image, left, -1, top, bottom, 6 * module, threshold);
             right = ExtendHorizontally(image, right, 1, top, bottom, 6 * module, threshold);

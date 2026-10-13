@@ -392,4 +392,30 @@ public class BarcodeReadingTests
         Assert.True(copy.Frames.RootFrame.DangerousTryGetSinglePixelMemory(out Memory<Rgba32> b));
         Assert.True(a.Span.SequenceEqual(b.Span));
     }
+
+    [Fact]
+    public void TurnedLuminance_IsTheLuminanceOfTheTurnedPicture()
+    {
+        // The 90 degree pictures are decoded from the luminance of the upright one, turned, instead of the luminance of
+        // the turned picture. Both must be the same, transparent pixels included (sizes that are not a multiple of the tiles).
+        var random = new Random(7);
+        using var image = new Image<Rgba32>(203, 97);
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                foreach (ref Rgba32 pixel in accessor.GetRowSpan(y))
+                {
+                    pixel = new Rgba32((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
+                }
+            }
+        });
+        using Image<Rgba32> turned = image.Clone(context => context.Rotate(RotateMode.Rotate90));
+
+        LuminanceSource expected = new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(turned);
+        LuminanceSource actual = BarcodeHelper.RotateClockwise(new ZXing.ImageSharp.ImageSharpLuminanceSource<Rgba32>(image));
+
+        Assert.Equal((expected.Width, expected.Height), (actual.Width, actual.Height));
+        Assert.Equal(expected.Matrix, actual.Matrix);
+    }
 }
