@@ -159,6 +159,56 @@ public class BarcodeReadingTests
         Assert.True(result.X > 2300 && result.Y > 1400, $"found at {result.X},{result.Y}");
     }
 
+    [Theory]
+    [InlineData(BarcodeFormat.DATA_MATRIX)]
+    [InlineData(BarcodeFormat.AZTEC)]
+    public void LargeSymbolRightUnderOtherBarcodes_IsFound(BarcodeFormat format)
+    {
+        // About 500 px wide, in the quiet-zone distance below an EAN-13 and a Code 128. The region finder joined the three
+        // (what counts as "close" depends on the size of the picture, not of the symbols), a join that holds a barcode that
+        // was read was left alone, and ZXing's Data Matrix and Aztec detectors do not find a symbol away from the middle.
+        using Image<Rgba32> ean = TestImages.Generate(BarcodeFormat.EAN_13, "4006381333931");
+        using Image<Rgba32> symbol = TestImages.Generate(format, "DevToys Barcode");
+        Assert.InRange(symbol.Width, 400, 520);
+        int eanBottom = 220 + ean.Height;
+
+        using Image<Rgba32> image = TestImages.Compose(
+            1400,
+            1200,
+            (TestImages.Generate(BarcodeFormat.CODE_128, "Hello-123"), 20, 20),
+            (ean.Clone(), 20, 220),
+            (symbol.Clone(), 20, eanBottom));
+
+        IReadOnlyList<BarcodeReadResult> results = BarcodeHelper.Read(image);
+
+        Assert.Equal(
+            new[] { (BarcodeFormat.CODE_128, "Hello-123"), (BarcodeFormat.EAN_13, "4006381333931"), (format, "DevToys Barcode") },
+            results.Select(r => (r.Format, r.Text)));
+        BarcodeReadResult found = results[2];
+        Assert.True(new Rectangle(20, eanBottom, symbol.Width, symbol.Height).Contains((int)found.X, (int)found.Y), $"centre {found.X},{found.Y}");
+    }
+
+    [Theory]
+    [InlineData(BarcodeFormat.DATA_MATRIX, BarcodeFormat.DATA_MATRIX)]
+    [InlineData(BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC)]
+    public void TwoLargeSymbolsCloseTogether_AreBothFound(BarcodeFormat first, BarcodeFormat second)
+    {
+        // Neither is around the middle of the island they make together, so nothing is read from it until it is split.
+        using Image<Rgba32> left = TestImages.Generate(first, "First symbol");
+        using Image<Rgba32> right = TestImages.Generate(second, "Second symbol");
+        int overlap = 50; // their quiet zones overlap a little: no ink is covered, and the gap between the symbols stays small
+
+        using Image<Rgba32> image = TestImages.Compose(
+            1800,
+            900,
+            (left.Clone(), 20, 40),
+            (right.Clone(), 20 + left.Width - overlap, 60));
+
+        Assert.Equal(
+            new[] { (first, "First symbol"), (second, "Second symbol") },
+            BarcodeHelper.Read(image).Select(r => (r.Format, r.Text)));
+    }
+
     [Fact]
     public void TheSameBarcodeFoundTwice_IsReportedOnce()
     {

@@ -73,6 +73,7 @@ These limits were measured on synthetic images only, not on photographs.
 - Bars narrower than about 2 px are unreliable.
 - Very dark uneven lighting, heavy noise and strong perspective fail for some types.
 - Data Matrix and Aztec on a busy background can be missed.
+- A Data Matrix or Aztec symbol that sits closer to other content than its own quiet zone (about four modules), or that touches a damaged barcode, can be missed.
 - Two identical barcodes in one picture are reported once.
 - GS1 application identifiers are not parsed. The raw text is shown.
 - On an image with no barcode, a false result is possible but rare. Of about 250 generated test images, one (random noise) produced one.

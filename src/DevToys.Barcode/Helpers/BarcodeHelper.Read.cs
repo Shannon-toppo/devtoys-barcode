@@ -256,9 +256,15 @@ internal static partial class BarcodeHelper
     /// <summary>
     /// ZXing has two limits that make it miss symbols in a picture holding several of them: its multiple barcode
     /// reader stops recursing after a few levels, and its Data Matrix and Aztec detectors only look around the
-    /// middle of the picture they get. So also decode, one by one, the islands of dark content that do not hold
-    /// a symbol found already.
+    /// middle of the picture they get. So also decode, one by one, the islands of dark content that are not a symbol
+    /// found already.
     /// </summary>
+    /// <remarks>
+    /// An island is whatever dark content is close to other dark content, and "close" is a fraction of the size of the
+    /// picture, so a symbol next to a barcode that was read is one island with it. Such a symbol is looked for in what
+    /// remains once the symbols already read are wiped out, and the picture is looked at again after every round that
+    /// reads something, as the first symbol read may have been the one that kept a second one off the middle of a crop.
+    /// </remarks>
     private static List<BarcodeReadResult> FindInRegions(
         Image<Rgba32> image,
         List<BarcodeReadResult> found,
@@ -267,28 +273,114 @@ internal static partial class BarcodeHelper
     {
         var results = new List<BarcodeReadResult>();
         long imageArea = (long)image.Width * image.Height;
-        foreach (Rectangle region in BarcodeRegionFinder.FindRegions(image).Where(r => !found.Any(f => f.Bounds.IntersectsWith(r))).Take(MaxRegions))
+        var finder = new BarcodeRegionFinder(image);
+
+        // Where the symbols read so far are, slightly enlarged because the bounds that ZXing gives are a little short.
+        var explained = new List<Rectangle>();
+        AddExplained(found.Select(f => f.Bounds));
+
+        var tried = new HashSet<Rectangle>();
+        var empty = new HashSet<Rectangle>(); // tried, and nothing was read (or too big to be worth it)
+        int attempts = 0;
+        bool progress = true;
+        while (progress && attempts < MaxRegions)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            // On a big picture, a region that covers most of it would only repeat the decoding that was just done.
-            if (imageArea > 1_000_000 && (long)region.Width * region.Height > imageArea * 0.6)
-            {
-                continue;
-            }
+            progress = false;
+            List<Rectangle> wiped = [.. explained];
 
-            int padding = Math.Max(16, Math.Max(region.Width, region.Height) / 5);
-            using Image<Rgba32> crop = image.Clone(context => context.Crop(region));
-            using var canvas = new Image<Rgba32>(region.Width + (2 * padding), region.Height + (2 * padding), Color.White);
-            canvas.Mutate(context => context.DrawImage(crop, new Point(padding, padding), 1f));
-
-            foreach (BarcodeReadResult result in RunPass(canvas, MainPass, filter, cancellationToken))
+            // The islands, then, for the ones that nothing was read from, the parts they split into when "close" gets stricter.
+            int radius = finder.DefaultRadius;
+            List<Rectangle> regions = finder.FindRegions(explained, radius);
+            while (regions.Count > 0)
             {
-                Rectangle b = result.Bounds;
-                results.Add(result with { Bounds = new Rectangle(b.X - padding + region.X, b.Y - padding + region.Y, b.Width, b.Height) });
+                var unread = new List<Rectangle>();
+                foreach (Rectangle region in regions)
+                {
+                    if (!tried.Add(region))
+                    {
+                        if (empty.Contains(region))
+                        {
+                            unread.Add(region);
+                        }
+
+                        continue;
+                    }
+
+                    // On a big picture, a region that covers most of it would only repeat the decoding that was just done.
+                    if (imageArea > 1_000_000 && (long)region.Width * region.Height > imageArea * 0.6)
+                    {
+                        empty.Add(region);
+                        unread.Add(region);
+                        continue;
+                    }
+
+                    if (attempts++ >= MaxRegions)
+                    {
+                        return results;
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int padding = Math.Max(16, Math.Max(region.Width, region.Height) / 5);
+                    using Image<Rgba32> crop = image.Clone(context => context.Crop(region));
+                    using var canvas = new Image<Rgba32>(region.Width + (2 * padding), region.Height + (2 * padding), Color.White);
+                    canvas.Mutate(context => context.DrawImage(crop, new Point(padding, padding), 1f));
+                    foreach (Rectangle done in wiped.Where(w => w.IntersectsWith(region)))
+                    {
+                        WipeOut(canvas, new Rectangle(done.X - region.X + padding, done.Y - region.Y + padding, done.Width, done.Height));
+                    }
+
+                    List<BarcodeReadResult> read = RunPass(canvas, MainPass, filter, cancellationToken);
+                    foreach (BarcodeReadResult result in read)
+                    {
+                        Rectangle b = result.Bounds;
+                        Rectangle bounds = new(b.X - padding + region.X, b.Y - padding + region.Y, b.Width, b.Height);
+                        results.Add(result with { Bounds = bounds });
+                        AddExplained([bounds]);
+                        progress = true;
+                    }
+
+                    if (read.Count == 0)
+                    {
+                        empty.Add(region);
+                        unread.Add(region);
+                    }
+                }
+
+                // Two symbols that are close to each other are one island, and nothing is read from it when neither of
+                // them is around its middle. Split it, and look at the parts.
+                if (radius == 1 || unread.Count == 0)
+                {
+                    break;
+                }
+
+                radius = Math.Max(1, radius / 2);
+                regions = [.. finder.FindRegions(explained, radius).Where(part => unread.Any(u => u.Contains(part)))];
             }
         }
 
         return results;
+
+        void AddExplained(IEnumerable<Rectangle> bounds)
+        {
+            foreach (Rectangle b in bounds.Where(b => !b.IsEmpty))
+            {
+                int margin = (Math.Max(b.Width, b.Height) / 50) + 2;
+                explained.Add(Rectangle.Inflate(b, margin, margin));
+            }
+        }
+    }
+
+    /// <summary>Paints <paramref name="area"/> white.</summary>
+    private static void WipeOut(Image<Rgba32> image, Rectangle area)
+    {
+        area = Rectangle.Intersect(area, new Rectangle(0, 0, image.Width, image.Height));
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = area.Top; y < area.Bottom; y++)
+            {
+                accessor.GetRowSpan(y).Slice(area.Left, area.Width).Fill(new Rgba32(255, 255, 255, 255));
+            }
+        });
     }
 
     /// <summary>
