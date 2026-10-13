@@ -79,11 +79,13 @@ internal static partial class BarcodeHelper
         Func<Image<Rgba32>, Prepared>? Prepare = null,
         BarcodeFormat[]? OnlyFormats = null,
         bool RelaxItfLengths = false,
-        int MaxSize = int.MaxValue);
+        int MaxSize = int.MaxValue,
+        bool StackedOncePerRightAngle = false);
 
     // 1D symbols and PDF417 need the picture rotated by 90 degrees to be read when they are vertical. Both orientations
-    // are always tried, so a picture with a horizontal and a vertical barcode gives both.
-    private static readonly Pass MainPass = new("main", Families.All, [0, 90]);
+    // are always tried, so a picture with a horizontal and a vertical barcode gives both. (ZXing's PDF417 detector turns
+    // the picture itself, see RunPass.)
+    private static readonly Pass MainPass = new("main", Families.All, [0, 90], StackedOncePerRightAngle: true);
 
     // The factors by which the surroundings of a 1D result are enlarged to confirm it.
     private static readonly double[] ConfirmationFactors = [1.5, 2];
@@ -402,6 +404,17 @@ internal static partial class BarcodeHelper
             // Every family is tried at every angle: matrix symbols are rotation invariant in theory, but ZXing's Aztec and
             // Data Matrix detectors read some small ones only when the picture is turned.
             Families families = pass.Families;
+
+            // ZXing's PDF417 detector tries the picture turned by 90, 180 and 270 degrees itself whenever it finds
+            // nothing, so an angle that is a right angle away from one decoded already mostly repeats it. Not entirely:
+            // the turned picture is binarized on a different grid, which reads some degraded symbols. That is left to
+            // the slower attempts, on the reduced picture; at full resolution PDF417 is the most expensive family.
+            if (pass.StackedOncePerRightAngle
+                && pass.Angles.TakeWhile(a => a != angle).Any(a => Math.Abs(Math.IEEERemainder(angle - a, 90)) < 1e-9))
+            {
+                families &= ~Families.Stacked;
+            }
+
             foreach (Families family in new[] { Families.OneDimensional, Families.Matrix, Families.Stacked })
             {
                 if (families.HasFlag(family))
