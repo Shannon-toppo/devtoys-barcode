@@ -553,6 +553,12 @@ internal static partial class BarcodeHelper
             }
         };
 
+        // With "try harder", ZXing's 1D readers also decode the picture turned by 90 degrees whenever they find nothing on
+        // it. Every pass decodes its pictures at right angle pairs itself (0 and 90, and each tilted angle has one about
+        // 90 degrees away), and a result is confirmed in the orientation it was read in, so that would only decode every
+        // orientation twice. (Only the 1D readers know of this hint.)
+        barcodeReader.Options.Hints[DecodeHintType.TRY_HARDER_WITHOUT_ROTATION] = true;
+
         if (relaxItfLengths)
         {
             barcodeReader.Options.Hints[DecodeHintType.ALLOWED_LENGTHS] = RelaxedItfLengths;
