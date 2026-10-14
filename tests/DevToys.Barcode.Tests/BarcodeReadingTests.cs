@@ -827,4 +827,44 @@ public class BarcodeReadingTests
             }
         }
     }
+
+    [Fact]
+    public void SamePicture_ReadManyTimesAtOnce_GivesTheSameResultsEveryTime()
+    {
+        // The reading decodes in parallel at several levels (families and angles, the parts around a symbol, a picture and its
+        // inverted copy), and several readings may run at once. None of that may change what is read, or where: symbols of each
+        // family, a turned PDF417, and blocks of noise, which the 1D readers (RSS above all) try hardest on.
+        using Image<Rgba32> image = TestImages.Compose(
+            1400,
+            1000,
+            (TestImages.Generate(BarcodeFormat.CODE_128, "Same-123"), 40, 40),
+            (TestImages.Transform(TestImages.Generate(BarcodeFormat.PDF_417, "Same PDF417"), context => context.Rotate(RotateMode.Rotate90)), 900, 60),
+            (TestImages.Generate(BarcodeFormat.DATA_MATRIX, "same"), 60, 560));
+        var random = new Random(23);
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 600; y < 960; y += 3)
+            {
+                for (int x = 600; x < 1360; x += 3)
+                {
+                    var value = (byte)(random.Next(2) * 255);
+                    for (int dy = 0; dy < 3; dy++)
+                    {
+                        accessor.GetRowSpan(y + dy).Slice(x, 3).Fill(new Rgba32(value, value, value, 255));
+                    }
+                }
+            }
+        });
+
+        string expected = Describe(BarcodeHelper.Read(image));
+        string[] readings = new string[8];
+        Parallel.For(0, readings.Length, new ParallelOptions { MaxDegreeOfParallelism = readings.Length }, i => readings[i] = Describe(BarcodeHelper.Read(image)));
+
+        Assert.Contains("PDF_417:Same PDF417", expected);
+        Assert.Contains("DATA_MATRIX:same", expected);
+        Assert.All(readings, reading => Assert.Equal(expected, reading));
+
+        static string Describe(IReadOnlyList<BarcodeReadResult> results)
+            => string.Join(" | ", results.Select(r => $"{r.Format}:{r.Text}@{r.Bounds}"));
+    }
 }

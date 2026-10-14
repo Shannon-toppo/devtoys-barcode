@@ -34,6 +34,9 @@ internal static class Program
             case "fp":
                 FalsePositives.Run(args.Skip(1).ToArray());
                 return 0;
+            case "pdf417":
+                Pdf417.Run(args.Skip(1).ToArray());
+                return 0;
             case "dump":
             {
                 // dump <dir> <symbol> <degradation> <strength>
@@ -47,7 +50,7 @@ internal static class Program
             }
 
             default:
-                Console.Error.WriteLine("usage: matrix [outfile] [degradation] | perf [test-images dir] [runs] | small [test-images dir] [runs] [name filter] | breakdown [test-images dir] | corpus <outfile> [test-images dir] | fp [multiplier] | dump <dir> <symbol> <degradation> <strength>");
+                Console.Error.WriteLine("usage: matrix [outfile] [degradation] | perf [test-images dir] [runs] | small [test-images dir] [runs] [name filter] | breakdown [test-images dir] | corpus <outfile> [test-images dir] | fp [multiplier] | pdf417 [bounds|pairs] | dump <dir> <symbol> <degradation> <strength>");
                 return 1;
         }
     }

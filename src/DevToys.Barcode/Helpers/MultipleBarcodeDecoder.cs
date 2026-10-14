@@ -126,10 +126,10 @@ internal static class MultipleBarcodeDecoder
             return null;
         }
 
-        Result? result = depth == 0 && context.InvertedInParallel
+        (Result? result, BinaryBitmap? decoded) = depth == 0 && context.InvertedInParallel
             ? DecodeOneWithInvertedInParallel(context, image)
             : DecodeOne(context, image);
-        if (result is null)
+        if (result is null || decoded is null)
         {
             return null;
         }
@@ -139,6 +139,12 @@ internal static class MultipleBarcodeDecoder
 
         // In the coordinates of this picture (or crop), before they are used to translate the result or to choose the parts to decode next.
         ResultPoint[] points = ToPictureFrame(result, width, height);
+
+        // Both ends of a PDF417 symbol, when ZXing only found one: the parts around it would hold the rest of it.
+        if (result.BarcodeFormat == BarcodeFormat.PDF_417)
+        {
+            points = Pdf417EndFinder.Complete(points, decoded.BlackMatrix);
+        }
         Result translated = Translate(result, points, xOffset, yOffset);
         if (points.Length == 0)
         {
@@ -197,8 +203,11 @@ internal static class MultipleBarcodeDecoder
         return new Found(translated, around);
     }
 
-    /// <summary>One decoding, as ZXing's <see cref="MultiFormatReader"/> does it, with the inverted picture tried separately.</summary>
-    private static Result? DecodeOne(Context context, BinaryBitmap image)
+    /// <summary>
+    /// One decoding, as ZXing's <see cref="MultiFormatReader"/> does it, with the inverted picture tried separately. Also gives
+    /// the picture the result was found in (its black and white matrix is the inverted one when that is where it was found).
+    /// </summary>
+    private static (Result? Result, BinaryBitmap? Decoded) DecodeOne(Context context, BinaryBitmap image)
     {
         context.Options.CancellationToken.ThrowIfCancellationRequested();
         Result? result = new MultiFormatReader().decode(image, context.Hints);
@@ -209,7 +218,7 @@ internal static class MultipleBarcodeDecoder
             result = new MultiFormatReader().decode(image, context.Hints);
         }
 
-        return result;
+        return (result, image);
     }
 
     /// <summary>
@@ -217,7 +226,7 @@ internal static class MultipleBarcodeDecoder
     /// it: on a big picture each is long. Its result is only used when the picture gives none, as in ZXing. Only for hints
     /// that <see cref="CanDecodeInvertedInParallel"/> allows.
     /// </summary>
-    private static Result? DecodeOneWithInvertedInParallel(Context context, BinaryBitmap image)
+    private static (Result? Result, BinaryBitmap? Decoded) DecodeOneWithInvertedInParallel(Context context, BinaryBitmap image)
     {
         context.Options.CancellationToken.ThrowIfCancellationRequested();
         var flipped = (BitMatrix)image.BlackMatrix.Clone();
@@ -239,7 +248,7 @@ internal static class MultipleBarcodeDecoder
 
         if (normal.Result is not null)
         {
-            return normal.Result;
+            return (normal.Result, image);
         }
 
         if (other.Error is not null)
@@ -247,7 +256,7 @@ internal static class MultipleBarcodeDecoder
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(other.Error);
         }
 
-        return other.Result;
+        return (other.Result, inverted);
 
         static (Result?, Exception?) Attempt(Func<Result?> decode)
         {
