@@ -17,7 +17,7 @@ internal static class FalsePositives
         for (int i = 0; i < 12 * perCategory; i++)
         {
             int seed = i;
-            images.Add(("noise", $"binary-{i}", () => Noise(800, 600, seed, kind: i % 4)));
+            images.Add(("noise", $"binary-{i}", () => Noise(800, 600, seed, kind: seed % 4)));
         }
 
         for (int i = 0; i < 12 * perCategory; i++)
@@ -116,13 +116,27 @@ internal static class FalsePositives
                         0 => (byte)(random.Next(2) * 255),
                         1 => (byte)random.Next(256),
                         2 => (byte)(random.Next(100) < 8 ? 0 : 255), // salt and pepper on white
-                        _ => (byte)(new Random(HashCode.Combine(seed, x / block, y / block)).Next(2) * 255),
+                        _ => (byte)((BlockHash(seed, x / block, y / block) & 1) * 255),
                     };
                     row[x] = new Rgba32(v, v, v, 255);
                 }
             }
         });
         return image;
+    }
+
+    /// <summary>
+    /// A hash of the block that is the same in every process (<see cref="HashCode"/> is seeded per process, which made
+    /// these pictures, and so what was read from them, differ from one run to the next).
+    /// </summary>
+    private static uint BlockHash(int seed, int x, int y)
+    {
+        uint h = (uint)seed * 0x9E3779B1u;
+        h = (h ^ (uint)x) * 0x85EBCA77u;
+        h = (h ^ (uint)y) * 0xC2B2AE3Du;
+        h ^= h >> 15;
+        h *= 0x27D4EB2Fu;
+        return h ^ (h >> 13);
     }
 
     internal static Image<Rgba32> Gradient(int w, int h, int seed)
