@@ -21,11 +21,17 @@
   <data name="CancelReading" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="CommandLineDescription" xml:space="preserve">
+    <value>Reads the barcodes in an image file, or generates a barcode from a text and writes it to a picture (SVG, PNG...).</value>
+  </data>
   <data name="ConfigurationTitle" xml:space="preserve">
     <value>Configuration</value>
   </data>
   <data name="Description" xml:space="preserve">
     <value>Read or generate barcodes (EAN-13, UPC-A, Code 128, Code 39, ITF, Codabar, Data Matrix, PDF417, Aztec...) from a text or an image. Can be exported as SVG.</value>
+  </data>
+  <data name="EmptyInputMessage" xml:space="preserve">
+    <value>There is no text to encode.</value>
   </data>
   <data name="EncodedValueDescription" xml:space="preserve">
     <value>A check digit was added. The barcode contains: {0}</value>
@@ -35,6 +41,9 @@
   </data>
   <data name="EncoderRejectedMessage" xml:space="preserve">
     <value>{0} could not encode this text. Details: {1}</value>
+  </data>
+  <data name="FileNotFoundMessage" xml:space="preserve">
+    <value>File not found: {0}</value>
   </data>
   <data name="FormatDescription" xml:space="preserve">
     <value>Select the type of barcode to generate</value>
@@ -54,6 +63,9 @@
   <data name="ImageWithBarcode" xml:space="preserve">
     <value>Barcode</value>
   </data>
+  <data name="InputOptionDescription" xml:space="preserve">
+    <value>Path of an image to read the barcodes from (HEIC and HEIF pictures too, on macOS), or text to encode as a barcode, or path of a text file to encode.</value>
+  </data>
   <data name="InputText" xml:space="preserve">
     <value>Text</value>
   </data>
@@ -68,6 +80,15 @@
   </data>
   <data name="NoBarcodeFoundDescription" xml:space="preserve">
     <value>Try a sharper or larger image, or restrict the picture to the barcode.</value>
+  </data>
+  <data name="OutputFileNotWrittenMessage" xml:space="preserve">
+    <value>Cannot write the file {0}: {1}</value>
+  </data>
+  <data name="OutputFileOptionDescription" xml:space="preserve">
+    <value>Path of the output file. When encoding: the picture to write; its extension chooses the format (.svg, .png, .jpg, .jpeg, .bmp, .gif, .pbm, .tiff, .tga, .webp). When reading: where to write the text, instead of the console.</value>
+  </data>
+  <data name="OutputFileRequiredMessage" xml:space="preserve">
+    <value>No output file was given. A barcode is written to a picture: use -o (--outputfile) with a path that ends in one of: {0}</value>
   </data>
   <data name="ReadingBarcodes" xml:space="preserve">
     <value>Reading...</value>
@@ -123,8 +144,23 @@
   <data name="ShortDisplayTitle" xml:space="preserve">
     <value>Barcode</value>
   </data>
+  <data name="ShowTypeOptionDescription" xml:space="preserve">
+    <value>When reading, writes the type of each barcode before its text, separated by a tab (for example EAN-13, a tab, then the text). A line break inside a text is then written as \n, so that each barcode stays on one line. This also applies when the image holds several barcodes.</value>
+  </data>
   <data name="TooLongMessage" xml:space="preserve">
     <value>This text is too long for {0}.</value>
+  </data>
+  <data name="TypeOptionDescription" xml:space="preserve">
+    <value>Type of barcode to encode: code128 (default), ean13, ean8, upca, upce, code39, code93, itf, codabar, datamatrix, pdf417 or aztec. Ignored when reading.</value>
+  </data>
+  <data name="UnexpectedErrorMessage" xml:space="preserve">
+    <value>Something went wrong: {0}</value>
+  </data>
+  <data name="UnknownTypeMessage" xml:space="preserve">
+    <value>Unknown barcode type {0}. Accepted types: {1}</value>
+  </data>
+  <data name="UnsupportedOutputFileMessage" xml:space="preserve">
+    <value>Cannot write a barcode to {0}. The file name must end in one of: {1}</value>
   </data>
   <data name="WrongLengthMessage" xml:space="preserve">
     <value>The length of this text is not accepted by {0}.</value>

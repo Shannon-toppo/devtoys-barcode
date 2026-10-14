@@ -21,11 +21,17 @@
   <data name="CancelReading" xml:space="preserve">
     <value>キャンセル</value>
   </data>
+  <data name="CommandLineDescription" xml:space="preserve">
+    <value>画像ファイルからバーコードを読み取るか、テキストからバーコードを生成して画像（SVG、PNGなど）に書き出します。</value>
+  </data>
   <data name="ConfigurationTitle" xml:space="preserve">
     <value>設定</value>
   </data>
   <data name="Description" xml:space="preserve">
     <value>テキストまたは画像から、バーコードを生成または読み取ります（EAN-13、UPC-A、Code 128、Code 39、ITF、Codabar、Data Matrix、PDF417、Aztecなど）。SVG形式で書き出せます。</value>
+  </data>
+  <data name="EmptyInputMessage" xml:space="preserve">
+    <value>エンコードするテキストがありません。</value>
   </data>
   <data name="EncodedValueDescription" xml:space="preserve">
     <value>チェックディジットを追加しました。バーコードに含まれる値は{0}です。</value>
@@ -35,6 +41,9 @@
   </data>
   <data name="EncoderRejectedMessage" xml:space="preserve">
     <value>{0}ではこのテキストをエンコードできませんでした。詳細：{1}</value>
+  </data>
+  <data name="FileNotFoundMessage" xml:space="preserve">
+    <value>ファイルが見つかりません：{0}</value>
   </data>
   <data name="FormatDescription" xml:space="preserve">
     <value>生成するバーコードの種類を選択します</value>
@@ -54,6 +63,9 @@
   <data name="ImageWithBarcode" xml:space="preserve">
     <value>バーコード</value>
   </data>
+  <data name="InputOptionDescription" xml:space="preserve">
+    <value>バーコードを読み取る画像のパス（macOSではHEICとHEIFも可）、バーコードにエンコードするテキスト、またはエンコードするテキストファイルのパス</value>
+  </data>
   <data name="InputText" xml:space="preserve">
     <value>テキスト</value>
   </data>
@@ -68,6 +80,15 @@
   </data>
   <data name="NoBarcodeFoundDescription" xml:space="preserve">
     <value>より鮮明で大きい画像を試すか、バーコードの部分だけを切り抜いてみてください。</value>
+  </data>
+  <data name="OutputFileNotWrittenMessage" xml:space="preserve">
+    <value>ファイル{0}を書き込めません：{1}</value>
+  </data>
+  <data name="OutputFileOptionDescription" xml:space="preserve">
+    <value>出力先のパス。エンコード時は書き出す画像のパスで、拡張子が形式を決めます（.svg、.png、.jpg、.jpeg、.bmp、.gif、.pbm、.tiff、.tga、.webp）。読み取り時は、コンソールの代わりにテキストを書き込むファイルのパスです。</value>
+  </data>
+  <data name="OutputFileRequiredMessage" xml:space="preserve">
+    <value>出力先のファイルが指定されていません。バーコードは画像として書き出されます。-o（--outputfile）に、次のいずれかで終わるパスを指定してください：{0}</value>
   </data>
   <data name="ReadingBarcodes" xml:space="preserve">
     <value>読み取り中…</value>
@@ -123,8 +144,23 @@
   <data name="ShortDisplayTitle" xml:space="preserve">
     <value>バーコード</value>
   </data>
+  <data name="ShowTypeOptionDescription" xml:space="preserve">
+    <value>読み取り時に、各バーコードのテキストの前に種類をタブ区切りで出力します（例：EAN-13、タブ、テキストの順）。このときテキスト内の改行は\nとして出力するため、1つのバーコードが1行に収まります。画像に複数のバーコードがある場合も同様です。</value>
+  </data>
   <data name="TooLongMessage" xml:space="preserve">
     <value>このテキストは{0}の上限を超えています。</value>
+  </data>
+  <data name="TypeOptionDescription" xml:space="preserve">
+    <value>エンコードするバーコードの種類：code128（既定）、ean13、ean8、upca、upce、code39、code93、itf、codabar、datamatrix、pdf417、aztec。読み取り時は無視されます。</value>
+  </data>
+  <data name="UnexpectedErrorMessage" xml:space="preserve">
+    <value>予期しないエラーが発生しました：{0}</value>
+  </data>
+  <data name="UnknownTypeMessage" xml:space="preserve">
+    <value>バーコードの種類{0}は不明です。指定できる種類：{1}</value>
+  </data>
+  <data name="UnsupportedOutputFileMessage" xml:space="preserve">
+    <value>{0}にはバーコードを書き出せません。ファイル名は次のいずれかで終わる必要があります：{1}</value>
   </data>
   <data name="WrongLengthMessage" xml:space="preserve">
     <value>このテキストの長さは{0}では受け付けられません。</value>

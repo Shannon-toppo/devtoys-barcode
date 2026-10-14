@@ -43,7 +43,11 @@ internal sealed class HeicConverter
 
     /// <summary>Whether a file of this name has to be converted before it can be read.</summary>
     internal bool NeedsConversion(string fileName)
-        => IsSupported && HeicExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
+        => IsSupported && HasHeicExtension(fileName);
+
+    /// <summary>Whether a file of this name is a HEIC or HEIF picture, whether or not this platform can read it.</summary>
+    internal static bool HasHeicExtension(string fileName)
+        => HeicExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Converts the picture in <paramref name="source"/> to a PNG in a self-destroying temporary file. A failure is

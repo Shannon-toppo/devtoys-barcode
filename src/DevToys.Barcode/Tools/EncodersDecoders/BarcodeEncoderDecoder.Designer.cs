@@ -84,6 +84,15 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Reads the barcodes in an image file, or generates a barcode from a text and writes it to a picture (SVG, PNG...)..
+        /// </summary>
+        internal static string CommandLineDescription {
+            get {
+                return ResourceManager.GetString("CommandLineDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Configuration.
         /// </summary>
         internal static string ConfigurationTitle {
@@ -98,6 +107,15 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         internal static string Description {
             get {
                 return ResourceManager.GetString("Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to There is no text to encode..
+        /// </summary>
+        internal static string EmptyInputMessage {
+            get {
+                return ResourceManager.GetString("EmptyInputMessage", resourceCulture);
             }
         }
         
@@ -125,6 +143,15 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         internal static string EncoderRejectedMessage {
             get {
                 return ResourceManager.GetString("EncoderRejectedMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to File not found: {0}.
+        /// </summary>
+        internal static string FileNotFoundMessage {
+            get {
+                return ResourceManager.GetString("FileNotFoundMessage", resourceCulture);
             }
         }
         
@@ -183,6 +210,15 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Path of an image to read the barcodes from (HEIC and HEIF pictures too, on macOS), or text to encode as a barcode, or path of a text file to encode..
+        /// </summary>
+        internal static string InputOptionDescription {
+            get {
+                return ResourceManager.GetString("InputOptionDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Text.
         /// </summary>
         internal static string InputText {
@@ -224,6 +260,33 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         internal static string NoBarcodeFoundDescription {
             get {
                 return ResourceManager.GetString("NoBarcodeFoundDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot write the file {0}: {1}.
+        /// </summary>
+        internal static string OutputFileNotWrittenMessage {
+            get {
+                return ResourceManager.GetString("OutputFileNotWrittenMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Path of the output file. When encoding: the picture to write; its extension chooses the format (.svg, .png, .jpg, .jpeg, .bmp, .gif, .pbm, .tiff, .tga, .webp). When reading: where to write the text, instead of the console..
+        /// </summary>
+        internal static string OutputFileOptionDescription {
+            get {
+                return ResourceManager.GetString("OutputFileOptionDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No output file was given. A barcode is written to a picture: use -o (--outputfile) with a path that ends in one of: {0}.
+        /// </summary>
+        internal static string OutputFileRequiredMessage {
+            get {
+                return ResourceManager.GetString("OutputFileRequiredMessage", resourceCulture);
             }
         }
         
@@ -390,11 +453,56 @@ namespace DevToys.Barcode.Tools.EncodersDecoders {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to When reading, writes the type of each barcode before its text, separated by a tab (for example EAN-13, a tab, then the text). A line break inside a text is then written as \n, so that each barcode stays on one line. This also applies when the image holds several barcodes..
+        /// </summary>
+        internal static string ShowTypeOptionDescription {
+            get {
+                return ResourceManager.GetString("ShowTypeOptionDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This text is too long for {0}..
         /// </summary>
         internal static string TooLongMessage {
             get {
                 return ResourceManager.GetString("TooLongMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Type of barcode to encode: code128 (default), ean13, ean8, upca, upce, code39, code93, itf, codabar, datamatrix, pdf417 or aztec. Ignored when reading..
+        /// </summary>
+        internal static string TypeOptionDescription {
+            get {
+                return ResourceManager.GetString("TypeOptionDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Something went wrong: {0}.
+        /// </summary>
+        internal static string UnexpectedErrorMessage {
+            get {
+                return ResourceManager.GetString("UnexpectedErrorMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unknown barcode type {0}. Accepted types: {1}.
+        /// </summary>
+        internal static string UnknownTypeMessage {
+            get {
+                return ResourceManager.GetString("UnknownTypeMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot write a barcode to {0}. The file name must end in one of: {1}.
+        /// </summary>
+        internal static string UnsupportedOutputFileMessage {
+            get {
+                return ResourceManager.GetString("UnsupportedOutputFileMessage", resourceCulture);
             }
         }
         

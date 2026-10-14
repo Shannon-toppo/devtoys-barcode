@@ -64,6 +64,32 @@ EANとUPCの種類では、チェックディジットを省略すると計算�
 
 画像をファイル選択で開くか、ツールにドラッグ＆ドロップするか、貼り付けます。検出されたバーコードは、種類とテキストとともに一覧に表示されます。最初のバーコードのテキストがテキスト欄に入ります。
 
+## コマンドライン
+
+この拡張機能は、DevToysのコマンドラインアプリ（DevToys CLI）に`barcode`コマンドも追加します。処理はアプリのツールと共通で、単体テストで確認しています。ただし、DevToys CLIそのものの上では、まだ動作を確認していません。
+
+バーコードを生成します。出力ファイルの拡張子で形式が決まります。`.svg`、`.png`、`.jpg`、`.bmp`、`.gif`、`.webp`のほか、DevToysが対応する画像形式を使えます。
+
+```
+DevToys.CLI barcode --input "Hello-123" --outputfile hello.svg
+DevToys.CLI barcode -i 400638133393 -t ean13 -o ean13.png
+DevToys.CLI barcode -i labels.txt -t datamatrix -o labels.png
+```
+
+`--type`（`-t`）には、`code128`（既定）、`ean13`、`ean8`、`upca`、`upce`、`code39`、`code93`、`itf`、`codabar`、`datamatrix`、`pdf417`、`aztec`のいずれかを指定します。テキストをエンコードできない場合は、理由とその種類のルールをエラー出力に書き出し、終了コード-1で終わります。
+
+画像のバーコードを読み取ります。各バーコードのテキストを、上から下、左から右の順に1行ずつ出力します。
+
+```
+DevToys.CLI barcode --input photo.png
+DevToys.CLI barcode -i photo.heic --showtype
+DevToys.CLI barcode -i photo.png -o result.txt
+```
+
+`--showtype`を付けると、各行はバーコードの種類、タブ、テキストの順になります。画像に複数のバーコードがある場合と`--showtype`を付けた場合は、テキスト内の改行を`\n`として出力します。バーコードが見つからない場合は、メッセージをエラー出力に書き出し、終了コード-1で終わります。
+
+`--input`に渡したテキストが、存在しない画像ファイルのパスのように見える場合（例：`photo.png`）は、ファイルが見つからないというエラーになります。そのようなテキストをエンコードするには、テキストファイルに書いて、そのファイルを渡してください。
+
 ## 既知の制限
 
 以下は合成画像だけで測定した結果です。写真では検証していません。

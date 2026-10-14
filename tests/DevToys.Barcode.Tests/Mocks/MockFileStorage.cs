@@ -22,7 +22,26 @@ internal sealed class MockFileStorage : IFileStorage, IDisposable
     public FileStream OpenWriteFile(string relativeOrAbsoluteFilePath, bool replaceIfExist)
         => new(relativeOrAbsoluteFilePath, replaceIfExist ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
 
-    public ValueTask<FileStream> PickSaveFileAsync(params string[] fileTypes) => throw new NotSupportedException();
+    /// <summary>
+    /// What the user types when asked for a file to save, in the command line: a path, or null for nothing. When it is
+    /// not set, asking is not expected and fails the test.
+    /// </summary>
+    internal Func<string?>? SaveFileAnswer { get; set; }
+
+    /// <summary>The file types of the last request to save a file, or null when there was none.</summary>
+    internal string[]? RequestedSaveFileTypes { get; private set; }
+
+    public ValueTask<FileStream?> PickSaveFileAsync(params string[] fileTypes)
+    {
+        RequestedSaveFileTypes = fileTypes;
+        if (SaveFileAnswer is null)
+        {
+            throw new NotSupportedException();
+        }
+
+        string? path = SaveFileAnswer();
+        return ValueTask.FromResult<FileStream?>(path is null ? null : File.OpenWrite(path));
+    }
 
     public ValueTask<SandboxedFileReader> PickOpenFileAsync(params string[] fileTypes) => throw new NotSupportedException();
 

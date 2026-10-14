@@ -1,6 +1,6 @@
 # Shannon.DevToys.Barcode
 
-Japanese version: [README.ja.md](README.ja.md)
+Japanese version: [README.ja.md](https://github.com/Shannon-toppo/devtoys-barcode/blob/main/README.ja.md)
 
 ## What it is
 
@@ -64,6 +64,32 @@ If the text does not fit the selected type, a message states the rule of that ty
 
 Load an image with the file picker, drag and drop it onto the tool, or paste it. The detected barcodes are listed with their type and text. The first one fills the text box.
 
+## Command line
+
+The extension also adds a `barcode` command for the DevToys command line app (DevToys CLI). It shares its code with the tool in the app, and is covered by unit tests, but it has not yet been run inside DevToys CLI itself.
+
+Generate a barcode. The extension of the output file chooses the format: `.svg`, `.png`, `.jpg`, `.bmp`, `.gif`, `.webp` and the other picture formats DevToys supports.
+
+```
+DevToys.CLI barcode --input "Hello-123" --outputfile hello.svg
+DevToys.CLI barcode -i 400638133393 -t ean13 -o ean13.png
+DevToys.CLI barcode -i labels.txt -t datamatrix -o labels.png
+```
+
+`--type` (`-t`) is one of `code128` (the default), `ean13`, `ean8`, `upca`, `upce`, `code39`, `code93`, `itf`, `codabar`, `datamatrix`, `pdf417` and `aztec`. If the text cannot be encoded, the reason and the rule of the type are written to the error output and the exit code is -1.
+
+Read the barcodes in an image. The text of each barcode is written on its own line, from top to bottom, then left to right.
+
+```
+DevToys.CLI barcode --input photo.png
+DevToys.CLI barcode -i photo.heic --showtype
+DevToys.CLI barcode -i photo.png -o result.txt
+```
+
+With `--showtype`, each line is the type of the barcode, a tab, then the text. A line break inside a text is written as `\n` when the image holds several barcodes or when `--showtype` is used. If no barcode is found, a message is written to the error output and the exit code is -1.
+
+A text passed to `--input` that looks like the path of a picture that does not exist (for example `photo.png`) is reported as a missing file. To encode such a text, put it in a text file and pass the file.
+
 ## Known limits
 
 These limits were measured on synthetic images only, not on photographs.
@@ -97,10 +123,10 @@ EXTRAPLUGIN=/absolute/path/to/src/DevToys.Barcode/bin/Debug/net8.0 /Applications
 
 ## Third-party licenses
 
-ZXing.Net and ZXing.Net.Bindings.ImageSharp.V3 are bundled in the package. Both are licensed under the Apache License 2.0. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+ZXing.Net and ZXing.Net.Bindings.ImageSharp.V3 are bundled in the package. Both are licensed under the Apache License 2.0. See [THIRD-PARTY-NOTICES.md](https://github.com/Shannon-toppo/devtoys-barcode/blob/main/THIRD-PARTY-NOTICES.md).
 
 SixLabors.ImageSharp is used through DevToys and is not bundled.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](https://github.com/Shannon-toppo/devtoys-barcode/blob/main/LICENSE).
