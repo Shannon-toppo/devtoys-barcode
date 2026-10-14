@@ -22,8 +22,14 @@ internal static class Program
             case "perf":
                 Performance.Run(args.Skip(1).ToArray());
                 return 0;
+            case "small":
+                Performance.Small(args.Skip(1).ToArray());
+                return 0;
             case "breakdown":
                 Performance.Breakdown(args.Skip(1).ToArray());
+                return 0;
+            case "corpus":
+                Corpus.Run(args.Skip(1).ToArray());
                 return 0;
             case "fp":
                 FalsePositives.Run(args.Skip(1).ToArray());
@@ -41,7 +47,7 @@ internal static class Program
             }
 
             default:
-                Console.Error.WriteLine("usage: matrix [outfile] [degradation] | perf [test-images dir] [runs] | breakdown [test-images dir] | fp [multiplier] | dump <dir> <symbol> <degradation> <strength>");
+                Console.Error.WriteLine("usage: matrix [outfile] [degradation] | perf [test-images dir] [runs] | small [test-images dir] [runs] [name filter] | breakdown [test-images dir] | corpus <outfile> [test-images dir] | fp [multiplier] | dump <dir> <symbol> <degradation> <strength>");
                 return 1;
         }
     }

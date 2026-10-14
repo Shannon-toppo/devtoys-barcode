@@ -71,6 +71,67 @@ internal static class Performance
         }
     }
 
+    /// <summary>Reading times on small images: generated symbols, a screenshot, and small pictures that need the slower attempts.</summary>
+    internal static void Small(string[] args)
+    {
+        string imagesDirectory = args.Length > 0 ? args[0] : "test-images";
+        int runs = args.Length > 1 ? int.Parse(args[1]) : 10;
+        string? only = args.Length > 2 ? args[2] : null;
+
+        var cases = new List<(string Name, Func<Image<Rgba32>> Make)>();
+        foreach (SymbolSpec symbol in Symbols.All)
+        {
+            cases.Add(($"generated {symbol.Name}", () => Symbols.Render(symbol)));
+        }
+
+        cases.Add(("three-barcodes.png (screenshot)", () => Image.Load<Rgba32>(Path.Combine(imagesDirectory, "three-barcodes.png"))));
+        cases.Add(("1100x800, Code 128 + EAN-13 + Aztec", () =>
+        {
+            var canvas = new Image<Rgba32>(1100, 800, Color.White);
+            using Image<Rgba32> code128 = Symbols.Render(Symbols.All[0]);
+            using Image<Rgba32> ean = Symbols.Render(Symbols.All[1]);
+            using Image<Rgba32> aztec = Symbols.Render(Symbols.All[11]);
+            canvas.Mutate(c => c.DrawImage(code128, new Point(20, 20), 1f).DrawImage(ean, new Point(20, 500), 1f).DrawImage(aztec, new Point(560, 20), 1f));
+            return canvas;
+        }));
+        cases.Add(("EAN-13 tilted 30 degrees (tilted attempts)", () => { using Image<Rgba32> s = Symbols.Render(Symbols.All[1]); return Degrade.Apply("rotate", 30, s, 1); }));
+        cases.Add(("Code 128, contrast 0.15 (enhanced attempts)", () => { using Image<Rgba32> s = Symbols.Render(Symbols.All[0]); return Degrade.Apply("lowcontrast", 0.15, s, 1); }));
+        cases.Add(("800x600 photo-like, no barcode (every attempt)", () => FalsePositives.PhotoLike(800, 600, 1)));
+        cases.Add(("800x600 text-like, no barcode (every attempt)", () => FalsePositives.TextLike(800, 600, 1)));
+        if (only is not null)
+        {
+            cases.RemoveAll(c => !c.Name.Contains(only, StringComparison.OrdinalIgnoreCase));
+        }
+
+        using (var warm = new Image<Rgba32>(300, 200, Color.White))
+        {
+            BarcodeHelper.Read(warm);
+        }
+
+        Console.WriteLine("| image | size | median ms | found |");
+        Console.WriteLine("|---|---|---|---|");
+        double total = 0;
+        foreach ((string name, Func<Image<Rgba32>> make) in cases)
+        {
+            using Image<Rgba32> image = make();
+            var times = new List<double>();
+            string found = string.Empty;
+            for (int i = 0; i < runs; i++)
+            {
+                var sw = Stopwatch.StartNew();
+                IReadOnlyList<BarcodeReadResult> results = BarcodeHelper.Read(image);
+                times.Add(sw.Elapsed.TotalMilliseconds);
+                found = string.Join(", ", results.Select(r => $"{r.Format}:{r.Text}"));
+            }
+
+            double median = times.Order().ElementAt(times.Count / 2);
+            total += median;
+            Console.WriteLine($"| {name} | {image.Width}x{image.Height} | {median:0.0} | {(found.Length == 0 ? "-" : found)} |");
+        }
+
+        Console.WriteLine($"| total of the medians | | {total:0.0} | |");
+    }
+
     /// <summary>Cost of each building block of the reader on each image (single run each, Release).</summary>
     internal static void Breakdown(string[] args)
     {

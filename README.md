@@ -77,7 +77,7 @@ These limits were measured on synthetic images only, not on photographs.
 - Two identical barcodes in one picture are reported once.
 - GS1 application identifiers are not parsed. The raw text is shown.
 - On an image with no barcode, a false result is possible but rare. Of about 250 generated test images, one (random noise) produced one.
-- Reading a 12 megapixel image with no barcode takes roughly one second.
+- Reading a 12 megapixel image with no barcode takes about 1.4 seconds on a 4-core Linux machine.
 
 ## Building from source
 
