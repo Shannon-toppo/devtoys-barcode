@@ -56,6 +56,8 @@ The extension then appears in the list as "Barcode Encoder / Decoder". This rout
 2. Enter the text. The barcode is generated from it.
 3. Save the image as PNG or SVG. Generated images contain no human-readable text under the bars.
 
+The save dialog comes from DevToys and has no format menu: the file name proposed ends in `.png`. To save an SVG, change the end of the file name to `.svg` before saving.
+
 For EAN and UPC types, the check digit is calculated when you omit it, and validated when you include it. The text you typed is not rewritten. The encoded value is shown.
 
 If the text does not fit the selected type, a message states the rule of that type.
@@ -101,6 +103,7 @@ These limits were measured on synthetic images only, not on photographs.
 - Data Matrix and Aztec on a busy background can be missed.
 - A Data Matrix or Aztec symbol that sits closer to other content than its own quiet zone (about four modules), or that touches a damaged barcode, can be missed.
 - Two identical barcodes in one picture are reported once.
+- When saving, a picture extension other than `.png` and `.svg` (for example `.jpg`) gives a file that still contains PNG data, because DevToys always writes the generated image as PNG.
 - GS1 application identifiers are not parsed. The raw text is shown.
 - On an image with no barcode, a false result is possible but rare. Of about 250 generated test images, one (random noise) produced one.
 - Reading a 12 megapixel image with no barcode takes about 1.4 seconds on a 4-core Linux machine.

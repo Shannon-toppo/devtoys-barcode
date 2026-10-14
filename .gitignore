@@ -605,3 +605,6 @@ $RECYCLE.BIN/
 
 # Local package output
 dist/
+
+# macOS Finder metadata
+.DS_Store

@@ -270,6 +270,23 @@ public sealed class BarcodeEncoderDecoderGuiToolTests : IDisposable
     // ---------------------------------------------------------------- SVG
 
     [Fact]
+    public async Task SaveAsSvg_OverALongerFile_LeavesNothingOfIt()
+    {
+        _inputBox.Text("Hello-123");
+        await _tool.WorkTask!;
+
+        FileInfo target = _fileStorage.CreateFile("svg");
+        await File.WriteAllTextAsync(target.FullName, new string('x', 100_000));
+
+        // As DevToys opens the file the user picked in the save dialog on macOS: without truncating it.
+        Func<FileStream, ValueTask> save = _imageViewer.CustomActionPerFileExtensionOnSaving[".svg"];
+        await save(new FileStream(target.FullName, FileMode.OpenOrCreate, FileAccess.Write));
+
+        string svg = await File.ReadAllTextAsync(target.FullName);
+        Assert.Equal(BarcodeHelper.GenerateSvg("Hello-123", BarcodeFormat.CODE_128).Value, svg);
+    }
+
+    [Fact]
     public async Task SaveAsSvg_IsOnlyAvailableForAGeneratedBarcode_AndWritesTheDisplayedOne()
     {
         Assert.False(_imageViewer.CustomActionPerFileExtensionOnSaving.ContainsKey(".svg"));

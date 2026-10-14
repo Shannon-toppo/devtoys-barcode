@@ -418,6 +418,8 @@ internal sealed class BarcodeEncoderDecoderGuiTool : IGuiTool, IDisposable
                 return;
             }
 
+            // DevToys opens the chosen file without truncating it: replacing a longer file would leave its end behind.
+            fileStream.SetLength(0);
             using var fileWriter = new StreamWriter(fileStream, leaveOpen: true);
             await fileWriter.WriteAsync(svg.Value);
         }
