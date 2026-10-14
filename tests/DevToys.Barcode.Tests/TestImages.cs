@@ -33,6 +33,28 @@ internal static class TestImages
     internal static Image<Rgba32> WithBorder(Image<Rgba32> image, int border = 40)
         => Compose(image.Width + (2 * border), image.Height + (2 * border), (image.Clone(), border, border));
 
+    /// <summary>The smallest rectangle that holds every dark pixel (what a barcode is drawn with) of <paramref name="image"/>.</summary>
+    internal static Rectangle InkBounds(Image<Rgba32> image)
+    {
+        int left = image.Width, top = image.Height, right = -1, bottom = -1;
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                if (BarcodeHelper.IsDark(image[x, y]))
+                {
+                    left = Math.Min(left, x);
+                    right = Math.Max(right, x);
+                    top = Math.Min(top, y);
+                    bottom = Math.Max(bottom, y);
+                }
+            }
+        }
+
+        Assert.True(right >= 0, "The image has no dark pixel.");
+        return new Rectangle(left, top, right - left + 1, bottom - top + 1);
+    }
+
     internal static Image<Rgba32> Transform(Image<Rgba32> image, Action<IImageProcessingContext> action)
         => image.Clone(action);
 

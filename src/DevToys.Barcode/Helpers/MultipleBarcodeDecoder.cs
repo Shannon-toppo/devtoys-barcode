@@ -20,7 +20,15 @@ namespace DevToys.Barcode.Helpers;
 /// whether a result is kept: one with the text of an earlier one is not). So here the parts around a symbol are decoded
 /// in parallel, and the results are put together in the order ZXing would have found them: the results are the same.
 /// The cancellation token is checked before each decoding, and the inverted picture is tried as a separate decoding,
-/// as ZXing tries it when given the "also inverted" hint (for the whole picture, at the same time as the picture).
+/// as ZXing tries it when given the "also inverted" hint (for the whole picture, at the same time as the picture when
+/// that is safe, see <see cref="CanDecodeInvertedInParallel"/>).
+/// </para>
+/// <para>
+/// One deliberate difference: ZXing's PDF417 detector turns the picture by 90, 180 or 270 degrees when it finds nothing
+/// upright, and gives the points of the symbol in the coordinates of the turned picture, which ZXing's own reader then
+/// takes for coordinates of the picture it decodes (so it also looks for more symbols in the wrong parts of the picture).
+/// Here those points are brought back to the coordinates of the picture that was decoded before anything uses them, see
+/// <see cref="ToPictureFrame"/>. The text, the format and the order of the results are unchanged.
 /// </para>
 /// </remarks>
 internal static class MultipleBarcodeDecoder
@@ -33,8 +41,9 @@ internal static class MultipleBarcodeDecoder
     private sealed record Found(Result Result, Found?[] Around);
 
     /// <summary>
-    /// Decodes <paramref name="luminance"/> with <paramref name="hints"/>. Returns the symbols found, possibly none.
-    /// Exceptions of ZXing's readers are let through, as ZXing lets them through.
+    /// Decodes <paramref name="luminance"/> with <paramref name="hints"/>. Returns the symbols found, possibly none, with
+    /// the points of each in the coordinates of <paramref name="luminance"/> (<see cref="ToPictureFrame"/>). Exceptions of
+    /// ZXing's readers are let through, as ZXing lets them through.
     /// </summary>
     internal static Result[] Decode(
         LuminanceSource luminance,
@@ -53,7 +62,12 @@ internal static class MultipleBarcodeDecoder
             return new QRCodeMultiReader().decodeMultiple(image, hints) ?? [];
         }
 
-        var context = new Context(luminance, hints, alsoInverted, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = maxDegreeOfParallelism });
+        var context = new Context(
+            luminance,
+            hints,
+            alsoInverted,
+            alsoInverted && maxDegreeOfParallelism > 1 && CanDecodeInvertedInParallel(hints),
+            new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = maxDegreeOfParallelism });
         Found? root = Find(context, image, 0, 0, 0);
 
         var results = new List<Result>();
@@ -62,7 +76,29 @@ internal static class MultipleBarcodeDecoder
         return [.. results];
     }
 
-    private sealed record Context(LuminanceSource Luminance, IDictionary<DecodeHintType, object> Hints, bool AlsoInverted, ParallelOptions Options);
+    private sealed record Context(LuminanceSource Luminance, IDictionary<DecodeHintType, object> Hints, bool AlsoInverted, bool InvertedInParallel, ParallelOptions Options);
+
+    // The readers that work on the black and white picture as a whole (BinaryBitmap.BlackMatrix). Every other reader of
+    // ZXing's MultiFormatReader scans rows of the picture (BinaryBitmap.getBlackRow).
+    private static readonly BarcodeFormat[] FormatsReadWithoutRows
+        = [BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC, BarcodeFormat.MAXICODE, BarcodeFormat.PDF_417];
+
+    /// <summary>
+    /// Whether the picture and its inverted copy can be decoded at the same time with <paramref name="hints"/>: when none
+    /// of the readers that may run scans rows. The inverted copy takes its rows from the binarizer of the picture
+    /// (<see cref="FixedBinarizer"/>), and ZXing's <see cref="GlobalHistogramBinarizer"/> (so <see cref="HybridBinarizer"/>
+    /// too) keeps the buffers it makes a row in as fields: two threads asking it for rows would write in each other's.
+    /// </summary>
+    /// <remarks>
+    /// Only the 1D readers (and the Intelligent Mail reader) ask for rows; QR Code, Data Matrix, Aztec, MaxiCode and PDF417
+    /// use the black and white matrix, which is made before the two are decoded and only read. A restriction to those formats
+    /// is the only case allowed: without one, or with any other format, ZXing's reader also runs the 1D readers.
+    /// </remarks>
+    internal static bool CanDecodeInvertedInParallel(IDictionary<DecodeHintType, object> hints)
+        => hints.TryGetValue(DecodeHintType.POSSIBLE_FORMATS, out object? formats)
+            && formats is IEnumerable<BarcodeFormat> list
+            && list.Any()
+            && list.All(FormatsReadWithoutRows.Contains);
 
     /// <summary>ZXing's results in the order its reader adds them: a symbol, then what is around it, left, above, right and below.</summary>
     private static void Collect(Found? found, List<Result> results, HashSet<string> texts)
@@ -90,7 +126,7 @@ internal static class MultipleBarcodeDecoder
             return null;
         }
 
-        Result? result = depth == 0 && context.AlsoInverted && context.Options.MaxDegreeOfParallelism > 1
+        Result? result = depth == 0 && context.InvertedInParallel
             ? DecodeOneWithInvertedInParallel(context, image)
             : DecodeOne(context, image);
         if (result is null)
@@ -98,15 +134,17 @@ internal static class MultipleBarcodeDecoder
             return null;
         }
 
-        Result translated = Translate(result, xOffset, yOffset);
-        ResultPoint[] points = result.ResultPoints;
-        if (points is null || points.Length == 0)
+        int width = image.Width;
+        int height = image.Height;
+
+        // In the coordinates of this picture (or crop), before they are used to translate the result or to choose the parts to decode next.
+        ResultPoint[] points = ToPictureFrame(result, width, height);
+        Result translated = Translate(result, points, xOffset, yOffset);
+        if (points.Length == 0)
         {
             return new Found(translated, []);
         }
 
-        int width = image.Width;
-        int height = image.Height;
         float minX = width;
         float minY = height;
         float maxX = 0f;
@@ -176,7 +214,8 @@ internal static class MultipleBarcodeDecoder
 
     /// <summary>
     /// Like <see cref="DecodeOne"/>, with the inverted picture decoded at the same time as the picture rather than after
-    /// it: on a big picture each is long. Its result is only used when the picture gives none, as in ZXing.
+    /// it: on a big picture each is long. Its result is only used when the picture gives none, as in ZXing. Only for hints
+    /// that <see cref="CanDecodeInvertedInParallel"/> allows.
     /// </summary>
     private static Result? DecodeOneWithInvertedInParallel(Context context, BinaryBitmap image)
     {
@@ -225,7 +264,8 @@ internal static class MultipleBarcodeDecoder
 
     /// <summary>
     /// Gives a black and white picture made already: the picture of the whole luminance, inverted, as ZXing's "also
-    /// inverted" inverts it (in place, which cannot be done while the picture is decoded).
+    /// inverted" inverts it (in place, which cannot be done while the picture is decoded). Its rows are those of the
+    /// picture, from the same binarizer, which is not safe to use from two threads: see <see cref="CanDecodeInvertedInParallel"/>.
     /// </summary>
     private sealed class FixedBinarizer(LuminanceSource luminance, BinaryBitmap image, BitMatrix matrix) : Binarizer(luminance)
     {
@@ -236,9 +276,68 @@ internal static class MultipleBarcodeDecoder
         public override Binarizer createBinarizer(LuminanceSource source) => new HybridBinarizer(source);
     }
 
-    private static Result Translate(Result result, int xOffset, int yOffset)
+    /// <summary>
+    /// The points of <paramref name="result"/> in the coordinates of the picture that was decoded, which is
+    /// <paramref name="width"/> x <paramref name="height"/>. ZXing gives them so for every symbol but PDF417: its detector turns
+    /// the black and white picture by 90, 180 or 270 degrees when it finds nothing upright, and gives the points in the turned
+    /// picture. The turn it applied is in the metadata of the result (the orientation of the symbol in the picture). The
+    /// orientation of another format is not a turn of its points: ZXing's 1D readers bring their points back themselves.
+    /// </summary>
+    /// <remarks>
+    /// This is where the correction is made, because it needs the size of the picture that was decoded (a crop has its own),
+    /// and the points must be right before they are translated by the offset of the crop and before they choose the parts
+    /// around the symbol that are decoded next. What the callers do afterwards (the bounds, the reader's own 90 degree and tilted
+    /// views) then works with points in the frame of the picture it decoded, as for any other format.
+    /// A point is a pixel column or row, except for the end of the pattern on the right, which is the column after its last
+    /// pixel. Turning keeps the numbers as they are, so the mapping is exact for them and is checked against the ink of
+    /// generated symbols, in square and non-square pictures and against the edges: the right edge of a symbol that was turned by
+    /// 90 or 270 degrees is a pixel short, as the bottom edge of an upright one already is.
+    /// </remarks>
+    internal static ResultPoint[] ToPictureFrame(Result result, int width, int height)
     {
-        ResultPoint[] points = result.ResultPoints;
+        ResultPoint[] points = result.ResultPoints ?? [];
+        int orientation = 0;
+        if (result.BarcodeFormat == BarcodeFormat.PDF_417
+            && result.ResultMetadata is { } metadata
+            && metadata.TryGetValue(ResultMetadataType.ORIENTATION, out object? value)
+            && value is int degrees)
+        {
+            orientation = degrees;
+        }
+
+        return ToPictureFrame(points, orientation, width, height);
+    }
+
+    /// <summary>Brings points found in the picture ZXing's PDF417 detector turned by <paramref name="orientation"/> degrees back to the picture <paramref name="width"/> x <paramref name="height"/>.</summary>
+    internal static ResultPoint[] ToPictureFrame(ResultPoint[] points, int orientation, int width, int height)
+    {
+        Func<float, float, (float X, float Y)>? map = orientation switch
+        {
+            90 => (x, y) => (width - 1 - y, x),
+            180 => (x, y) => (width - x, height - 1 - y),
+            270 => (x, y) => (y, height - x),
+            _ => null,
+        };
+        if (map is null)
+        {
+            return points;
+        }
+
+        var mapped = new ResultPoint[points.Length];
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (points[i] is { } point)
+            {
+                (float x, float y) = map(point.X, point.Y);
+                mapped[i] = new ResultPoint(x, y);
+            }
+        }
+
+        return mapped;
+    }
+
+    private static Result Translate(Result result, ResultPoint[] points, int xOffset, int yOffset)
+    {
         var translated = new ResultPoint[points.Length];
         for (int i = 0; i < points.Length; i++)
         {
